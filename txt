@@ -1,0 +1,86 @@
+src/
+  app/                          # app wiring only
+    router.jsx                  # all routes
+    ProtectedRoute.jsx          # role guard
+    ErrorBoundary.jsx
+    providers/
+      AuthProvider.jsx          # user, roles, franchiseIds
+      FranchiseScopeProvider.jsx# admin can switch franchise scope
+      ToastProvider.jsx         # optional global toasts
+
+  layouts/
+    AdminLayout.jsx             # header/nav + <Outlet/>
+    FranchiseLayout.jsx
+
+  features/
+    auth/
+      pages/Login.jsx
+      api.js                    # login/me/logout
+      hooks.js                  # useLogin, useMe
+    dashboard/
+      pages/AdminDashboard.jsx
+      pages/FranchiseDashboard.jsx
+    inventory/                  # franchise-wise stock & enable/disable (+ price override if you keep it here)
+      api.js                    # GET/adjust/set/toggle, product-level toggle
+      components/InventoryTable.jsx
+      components/VariantRow.jsx
+      pages/AdminInventory.jsx
+      pages/FranchiseInventory.jsx
+    products/                   # admin CRUD
+      api.js                    # list/create/update/delete
+      components/ProductTable.jsx
+      components/ProductForm.jsx
+      pages/AdminProducts.jsx
+    orders/                     # order management for both roles
+      api.js                    # list, detail, update status
+      components/OrderTable.jsx
+      components/OrderFilters.jsx
+      pages/AdminOrders.jsx
+      pages/FranchiseOrders.jsx
+      pages/OrderDetail.jsx
+    users/                      # admin user/role mgmt
+      api.js
+      components/UserTable.jsx
+      components/UserForm.jsx
+      pages/AdminUsers.jsx
+    franchises/                 # admin franchise mgmt
+      api.js
+      components/FranchiseTable.jsx
+      components/FranchiseForm.jsx
+      pages/AdminFranchises.jsx
+
+  shared/                       # reusable bits (no business logic)
+    components/
+      FranchisePicker.jsx       # admin-only scope selector
+      EmptyState.jsx
+      ErrorView.jsx
+      Loading.jsx
+      ui/
+        Button.jsx
+        Input.jsx
+        Select.jsx
+        Toggle.jsx
+        Modal.jsx
+        Table.jsx
+        Pagination.jsx
+        Badge.jsx
+        Toast.jsx
+    hooks/
+      useDebounce.js
+      useQueryParam.js
+    utils/
+      api.js                    # fetch wrapper (VITE_API_BASE_URL)
+      rbac.js                   # hasAnyRole / can()
+      routes.js                 # central route constants
+      storage.js                # local/session helpers
+      constants.js              # ROLES, ORDER_STATUS, etc.
+
+  assets/
+    icons/
+    images/
+
+  styles/
+    index.css                   # or Tailwind entry
+
+  main.jsx
+  index.css                     # if not using styles/
