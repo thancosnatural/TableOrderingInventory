@@ -3,9 +3,6 @@ import { lazy } from "react";
 import MainLayout from "../layouts/MainLayout";
 import ErrorBoundary from "../components/ErrorBoundory";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import EmployeesPage from "@/pages/Employees";
-import PayrollPage from "@/pages/Payroll";
-import LeavePage from "@/pages/Leaves";
 import ABACPage from "@/pages/RBAC";
 import KitchenOrdersPage from "@/pages/KitchenOrders";
 import OrdersPage from "@/pages/Orders";
@@ -20,6 +17,7 @@ import AddProductPage from "@/pages/AddProduct";
 import ProductsPage from "@/pages/Products";
 import CategoriesPage from "@/pages/Categories";
 import AddOnsPage from "@/pages/AddOns";
+import UsersPage from "@/pages/Users";
 
 // Lazy-loaded pages
 const Home = lazy(() => import("../pages/Home"));
@@ -82,6 +80,17 @@ const AppRoutes = () => {
             <ProtectedRoute>
               <ErrorBoundary>
                 <AddOnsPage />
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+
+         <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                <UsersPage />
               </ErrorBoundary>
             </ProtectedRoute>
           }

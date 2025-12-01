@@ -35,7 +35,7 @@ export function AuthProvider({ children, baseUrl = '/' }) {
     } catch (e) {
       // no valid session
       setAccessToken(null);
-      setUser(null);
+      // setUser(null);
     } finally {
       setLoadingAuth(false);
     }
@@ -62,7 +62,7 @@ export function AuthProvider({ children, baseUrl = '/' }) {
 
       if (resp?.data?.accessToken) {
         setAccessToken(resp.data.accessToken);
-        if (resp.data.user) setUser(resp.data.user);
+        // if (resp.data.user) setUser(resp.data.user);
         return { success: true };
       }
       return { success: false, message: resp?.data?.message || 'Unknown response' };

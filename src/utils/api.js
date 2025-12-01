@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { getToken } from './cookieUtils';
 
-export const API_BASE_URL = 'http://localhost:3000/api/v1';
+export const API_BASE_URL = 'http://localhost:3000/api';
 
-// export const API_BASE_URL = 'https://thancosserver.thancosnatural.com/api/v1'
+// export const API_BASE_URL = 'https://thancosserver.thancosnatural.com/api'
 
 export const apiStatusConstants = {
     INITIAL: 'INITIAL',
