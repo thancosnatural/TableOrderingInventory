@@ -18,7 +18,7 @@ import { useAuth } from "@/context/AuthContext";
  */
 
 export default function Header({ setMobileOpen = () => { console.log("OPEN"); } }) {
-  const { user, scopes, setUser } = useAuth();
+  const { user, scopes, setUser, logout } = useAuth();
 
   const navigate = useNavigate();
 
@@ -78,12 +78,6 @@ export default function Header({ setMobileOpen = () => { console.log("OPEN"); } 
       document.removeEventListener("keydown", onKey);
     };
   }, []);
-
-  function logout() {
-    // clear user & redirect - server logout recommended
-    setUser(null);
-    navigate("/login");
-  }
 
   // Quick actions based on role (table-ordering context)
   const quickActions = (() => {

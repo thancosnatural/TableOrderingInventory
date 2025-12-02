@@ -26,6 +26,7 @@ export default function Login() {
 
   const activeRole = ROLES.find(r => r.key === selectedRole);
 
+  // console.log("Access Token in Login Page:", accessToken);
   // useEffect(() => {
   //   document.title = "Login - Thancos Table Ordering Admin";
   //   if(accessToken) {
