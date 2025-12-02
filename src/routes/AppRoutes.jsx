@@ -18,6 +18,7 @@ import ProductsPage from "@/pages/Products";
 import CategoriesPage from "@/pages/Categories";
 import AddOnsPage from "@/pages/AddOns";
 import UsersPage from "@/pages/Users";
+import RoleBasedLogin from "@/pages/Login";
 
 // Lazy-loaded pages
 const Home = lazy(() => import("../pages/Home"));
@@ -28,6 +29,17 @@ const AppRoutes = () => {
 
   return (
     <Routes location={location} key={location.pathname}>
+       <Route
+          path="/login"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                <RoleBasedLogin />
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+
       <Route path="/" element={<MainLayout />}>
         <Route
           index
@@ -39,7 +51,6 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-
 
         <Route
           path="/menu/products/new"

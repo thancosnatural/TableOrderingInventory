@@ -1,28 +1,80 @@
-import Cookies from 'js-cookie';
+import Cookies from "js-cookie";
 
-// Functions for handling user data
+/* ========================================================================
+   USER DATA (stores role, permissions, name, email, outlet info, etc.)
+   ======================================================================== */
+
 export const setUserData = (userData) => {
-    Cookies.set('thancosadmin', JSON.stringify(userData), { expires: 3650 }); // 10 years (3650 days)
+    Cookies.set("th_to_user", JSON.stringify(userData), {
+        expires: 3650,         // 10 years
+        sameSite: "Strict",
+        secure: true,
+    });
 };
 
 export const getUserData = () => {
-    const userDataString = Cookies.get('thancosuser');
-    return userDataString ? JSON.parse(userDataString) : null;
+    try {
+        const stored = Cookies.get("th_to_user");
+        return stored ? JSON.parse(stored) : null;
+    } catch (err) {
+        console.error("Failed to parse th_to_user:", err);
+        return null;
+    }
 };
 
 export const clearUserData = () => {
-    Cookies.remove('thancosadmin');
+    Cookies.remove("th_to_user");
 };
 
-// Functions for handling tokens
-export const setToken = (token) => {
-    Cookies.set('thancosadmintoken', token, { expires: 3650 }); // 10 years (3650 days)
+
+/* ========================================================================
+   ACCESS TOKEN
+   ======================================================================== */
+
+export const setAccessToken = (token) => {
+    Cookies.set("th_to_access_token", token, {
+        expires: 3650,
+        sameSite: "Strict",
+        secure: true,
+    });
 };
 
-export const getToken = () => {
-    return Cookies.get('thancosadmintoken');
+export const getAccessToken = () => {
+    return Cookies.get("th_to_access_token") || null;
 };
 
-export const removeToken = () => {
-    Cookies.remove('thancosadmintoken');
+export const removeAccessToken = () => {
+    Cookies.remove("th_to_access_token");
+};
+
+
+/* ========================================================================
+   REFRESH TOKEN
+   ======================================================================== */
+
+export const setRefreshToken = (token) => {
+    Cookies.set("th_to_refresh_token", token, {
+        expires: 3650,
+        sameSite: "Strict",
+        secure: true,
+    });
+};
+
+export const getRefreshToken = () => {
+    return Cookies.get("th_to_refresh_token") || null;
+};
+
+export const removeRefreshToken = () => {
+    Cookies.remove("th_to_refresh_token");
+};
+
+
+/* ========================================================================
+   CLEAR ALL
+   ======================================================================== */
+
+export const clearAllAuth = () => {
+    Cookies.remove("th_to_user");
+    Cookies.remove("th_to_access_token");
+    Cookies.remove("th_to_refresh_token");
 };

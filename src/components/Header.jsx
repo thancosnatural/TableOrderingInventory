@@ -18,17 +18,18 @@ import { useAuth } from "@/context/AuthContext";
  */
 
 export default function Header({ setMobileOpen = () => { console.log("OPEN"); } }) {
-  const { user, role, scopes, setUser } = useAuth();
+  const { user, scopes, setUser } = useAuth();
+
   const navigate = useNavigate();
 
   const initials =
     user?.initials ||
-    (user?.name ? user.name.split(" ").map((n) => n[0]).slice(0, 2).join("") : "U");
-  const name = user?.name || "User";
+    (user?.full_name ? user.full_name.split(" ").map((n) => n[0]).slice(0, 2).join("") : "U");
+  const name = user?.full_name || "User";
 
   // find label for current role from scopes list
   const roleLabel =
-    (scopes || []).find((s) => s.key === role)?.label || (role || "User");
+    (scopes || []).find((s) => s.key === user?.role)?.label || (user?.role || "User");
 
   // search state
   const [search, setSearch] = useState("");
@@ -86,7 +87,7 @@ export default function Header({ setMobileOpen = () => { console.log("OPEN"); } 
 
   // Quick actions based on role (table-ordering context)
   const quickActions = (() => {
-    switch (role) {
+    switch (user?.role) {
       case "super_admin":
       case "brand_admin":
         return [

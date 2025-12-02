@@ -53,7 +53,7 @@ export default function PermissionsTab({
                   <div className="mt-1 text-[11px] text-slate-500">
                     Users:{" "}
                     <span className="font-semibold text-slate-800">
-                      {roleCounts[r.key] ?? 0}
+                      {r.user_count}
                     </span>
                   </div>
                 </div>

@@ -1,32 +1,95 @@
-import { LoginCard } from "@/components/LoginCard";
-import { Button } from "@/components/ReusableComponents";
-import { useAuth } from "@/context/AuthProvider";
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ShieldCheck, Building2, Store, Users } from "lucide-react";
+
+import { LoginForm } from "@/components/AuthComponents/LoginForm";
+import { ActiveRoleBadge, RoleSelector } from "@/components/AuthComponents/RoleSelector";
+import { LeftInfoPanel } from "@/components/AuthComponents/LeftInfoPannel";
+import { AuthShell } from "@/components/AuthComponents/AuthShell";
+import { useAuth } from "@/context/AuthContext";
+
+const ROLES = [
+  { key: "super_admin", label: "Super Admin", description: "Full access.", icon: ShieldCheck, accent: "from-sky-500 to-blue-600" },
+  { key: "brand_admin", label: "Brand Admin", description: "Manage a brand.", icon: Building2, accent: "from-green-400 to-emerald-500" },
+  { key: "outlet_admin", label: "Outlet Admin", description: "Outlet operations.", icon: Store, accent: "from-amber-400 to-orange-500" },
+  { key: "staff", label: "Staff", description: "Limited access.", icon: Users, accent: "from-purple-400 to-violet-500" }
+];
 
 export default function Login() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const { user, logout, loadingAuth } = useAuth();
+  const navigate = useNavigate();
+  const [selectedRole, setSelectedRole] = useState(ROLES[0].key);
+  const [form, setForm] = useState({ email: "", password: "", remember: true });
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  if (loadingAuth) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  const { login, accessToken } = useAuth();
+
+  const activeRole = ROLES.find(r => r.key === selectedRole);
+
+  // useEffect(() => {
+  //   document.title = "Login - Thancos Table Ordering Admin";
+  //   if(accessToken) {
+  //     navigate("/");
+  //   }else{
+  //     navigate("/login");
+  //   }
+  // }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg("");
+    setLoading(true);
+
+    try {
+      const payload = {
+        email: form.email,
+        password: form.password,
+        selectedRole, // consistent naming for your login() function
+        device_info: navigator.userAgent,
+      };
+
+      // 🔥 Use AuthContext login() — not direct API call
+      const result = await login(payload);
+
+      if (!result.success) {
+        setErrorMsg(result.message || "Login failed");
+        setLoading(false);
+        return;
+      }
+
+      // 🚀 On success: go to dashboard/home
+      navigate("/");
+    } catch (err) {
+      setErrorMsg("Unexpected error. Try again.");
+    }
+
+    setLoading(false);
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-      {!loggedIn && <div className="w-full max-w-4xl"><LoginCard onLoginSuccess={() => setLoggedIn(true)} /></div>}
+    <AuthShell
+      left={<LeftInfoPanel accent={activeRole.accent} />}
+      right={
+        <>
+          <RoleSelector
+            roles={ROLES}
+            selectedRole={selectedRole}
+            onSelect={setSelectedRole}
+          />
+          <ActiveRoleBadge role={activeRole} />
 
-      {loggedIn && (
-        <div className="w-full max-w-3xl rounded-lg bg-white p-6 shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">Welcome{user ? `, ${user.name}` : ''}</h2>
-              <p className="text-sm text-gray-500">Role: {user?.role || '—'}</p>
-            </div>
-            <div>
-              <Button onClick={() => { logout(); setLoggedIn(false); }} className="bg-gray-100 text-gray-800">Logout</Button>
-            </div>
-          </div>
-          <div className="mt-6 text-gray-600">You are now signed in. Build your HRM dashboard here.</div>
-        </div>
-      )}
-    </div>
+          <LoginForm
+            form={form}
+            onChange={(e) =>
+              setForm({ ...form, [e.target.name]: e.target.value })
+            }
+            onSubmit={handleSubmit}
+            loading={loading}
+            errorMsg={errorMsg}
+            roleLabel={activeRole.label}
+          />
+        </>
+      }
+    />
   );
 }

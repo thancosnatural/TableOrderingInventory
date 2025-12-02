@@ -9,7 +9,7 @@ export default function ProtectedRoute({
   requireVerified = false,     // set true if you need verified users only
 }) {
   const location = useLocation();
-  const isAuthed = Boolean(Cookies.get("thancosadmintoken"));
+  const isAuthed = Boolean(Cookies.get("th_to_access_token"));
   const { user } = getUserData() || {};
 
   // Not logged in → add ?auth=open once to trigger your login modal

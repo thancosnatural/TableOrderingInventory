@@ -8,9 +8,11 @@ import { PERMISSIONS } from "@/components/RBACComponents/PermissionModel";
 // IMPORTED COMPONENTS
 import UsersTab from "@/components/UserComponents/UsersTab";
 import PermissionsTab from "@/components/UserComponents/PermissionsTab";
-import { getRoles } from "@/services/authService";
+import { getRoles, getUsers } from "@/services/authService";
 
-// Base roles if backend/rolesConfig not yet wired
+// ===============================
+// DEFAULT ROLES (fallback only)
+// ===============================
 const DEFAULT_ROLES_CONFIG = [
   {
     key: "super_admin",
@@ -59,8 +61,40 @@ const DEFAULT_ROLES_CONFIG = [
   },
 ];
 
+// =====================================
+// Helper: build permissions matrix
+// from roles + PERMISSIONS definition
+// =====================================
+function buildPermissionsMatrix(rolesConfigArray) {
+  const matrix = {};
+
+  rolesConfigArray.forEach((role) => {
+    matrix[role.key] = {};
+
+    PERMISSIONS.forEach((perm) => {
+      const moduleEnabled =
+        role.defaultModules === "all" ||
+        (Array.isArray(role.defaultModules) &&
+          role.defaultModules.includes(perm.key));
+
+      const actionsState = {};
+      perm.actions.forEach((a) => {
+        actionsState[a.key] = moduleEnabled;
+      });
+
+      matrix[role.key][perm.key] = {
+        module: moduleEnabled,
+        actions: actionsState,
+      };
+    });
+  });
+
+  return matrix;
+}
+
 export default function UsersPage() {
-  const { role, user, rolesConfig } = useAuth() || {};
+  const { user, rolesConfig } = useAuth() || {};
+  const role = user?.role || null;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const mainTab =
@@ -70,12 +104,9 @@ export default function UsersPage() {
     setSearchParams({ tab: tabKey });
   }
 
-  // ---------- USERS STATE ----------
-
-const [rolesLoading, setRolesLoading] = useState(false);
-const [rolesError, setRolesError] = useState(null);
-
-
+  // ===============================
+  // USERS STATE
+  // ===============================
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [search, setSearch] = useState("");
@@ -87,47 +118,102 @@ const [rolesError, setRolesError] = useState(null);
     role === "super_admin" || role === "brand_admin" || role === "outlet_admin";
   const isUserReadOnly = role === "staff";
 
-  // ---------- ROLES & PERMISSIONS STATE ----------
+  // ===============================
+  // ROLES & PERMISSIONS STATE
+  // ===============================
   const [rolesConfigState, setRolesConfigState] = useState([]);
   const [rolePermissions, setRolePermissions] = useState({});
   const [editingRoleKey, setEditingRoleKey] = useState(null);
 
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesError, setRolesError] = useState(null);
+
   const canEditRoles = role === "super_admin";
 
-  // Seed roles + rolePermissions on mount / rolesConfig change
-  useEffect(() => {
-    const baseRoles =
-      Array.isArray(rolesConfig) && rolesConfig.length > 0
+  // ===============================
+  // LOAD ROLES FROM BACKEND
+  // ===============================
+useEffect(() => {
+  async function fetchRolesFromApi() {
+    setRolesLoading(true);
+    setRolesError(null);
+
+    try {
+      const { data } = await getRoles();
+      const backendRoles = Array.isArray(data?.data) ? data.data : [];
+
+      // 🔹 Normalize every role to have: key, label, description, defaultModules
+      const rolesFromBackend = backendRoles.length
+        ? backendRoles.map((r) => {
+            // Prefer an existing "key" if present, else name/display_name
+            const rawKey = r.key || r.name || r.display_name || "";
+
+            const key = String(rawKey)
+              .trim()
+              .toLowerCase()
+              .replace(/\s+/g, "_"); // "Super Admin" -> "super_admin"
+
+            const label =
+              r.label ||
+              r.display_name ||
+              r.name ||
+              key
+                .split("_")
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(" ");
+
+            return {
+              ...r,
+              key,
+              label,
+              description: r.description || "",
+              // if backend doesn't send this yet, keep empty or inject your own logic
+              defaultModules: r.defaultModules || [],
+            };
+          })
+        : Array.isArray(rolesConfig) && rolesConfig.length
         ? rolesConfig
         : DEFAULT_ROLES_CONFIG;
 
-    setRolesConfigState(baseRoles);
+      // If backend also returns a permissions matrix, use it
+      const permsFromBackend =
+        data?.permissions && Object.keys(data.permissions).length
+          ? data.permissions
+          : null;
 
-    const matrix = {};
-    baseRoles.forEach((r) => {
-      matrix[r.key] = {};
-      PERMISSIONS.forEach((perm) => {
-        const moduleEnabled =
-          r.defaultModules === "all" ||
-          (Array.isArray(r.defaultModules) &&
-            r.defaultModules.includes(perm.key));
+      setRolesConfigState(rolesFromBackend);
 
-        const actionsState = {};
-        perm.actions.forEach((a) => {
-          actionsState[a.key] = moduleEnabled;
-        });
+      if (permsFromBackend) {
+        setRolePermissions(permsFromBackend);
+      } else {
+        // fallback: derive from defaultModules + PERMISSIONS
+        const matrix = buildPermissionsMatrix(rolesFromBackend);
+        setRolePermissions(matrix);
+      }
+    } catch (err) {
+      console.error(err);
+      setRolesError(err.message || "Error loading roles");
 
-        matrix[r.key][perm.key] = {
-          module: moduleEnabled,
-          actions: actionsState,
-        };
-      });
-    });
+      const fallbackRoles =
+        Array.isArray(rolesConfig) && rolesConfig.length
+          ? rolesConfig
+          : DEFAULT_ROLES_CONFIG;
 
-    setRolePermissions(matrix);
-  }, [rolesConfig]);
+      setRolesConfigState(fallbackRoles);
+      const matrix = buildPermissionsMatrix(fallbackRoles);
+      setRolePermissions(matrix);
+    } finally {
+      setRolesLoading(false);
+    }
+  }
 
-  // Helpers: role meta
+  fetchRolesFromApi();
+}, [rolesConfig]);
+
+
+  // ===============================
+  // ROLE META (LABELS & DESC)
+  // ===============================
   const roleMetaMap = useMemo(() => {
     const map = {};
     rolesConfigState.forEach((r) => {
@@ -169,273 +255,83 @@ const [rolesError, setRolesError] = useState(null);
     [rolesConfigState]
   );
 
-  // ---------- ✅ Allowed roles for user creation (fully dynamic) ----------
+  const existingRoleKeys = useMemo(
+    () => rolesConfigState.map((r) => r.key),
+    [rolesConfigState]
+  );
+
+  // ===============================
+  // ALLOWED ROLES FOR USER CREATE
+  // ===============================
   const allowedRolesForCreate = useMemo(() => {
     if (!canManageUsers) return [];
     if (!allRoleKeys.length) return [];
 
-    // Super admin: can assign any role that exists in the system (from backend)
     if (role === "super_admin") {
       return allRoleKeys;
     }
 
-    // Brand admin: everything except super_admin
     if (role === "brand_admin") {
       return allRoleKeys.filter((k) => k !== "super_admin");
     }
 
-    // Outlet admin: only "lower" roles.
-    // For now we treat super_admin, brand_admin, outlet_admin as non-assignable.
-    // If backend later sends role hierarchy, you can drive this from there.
     if (role === "outlet_admin") {
       return allRoleKeys.filter(
-        (k) => k !== "super_admin" && k !== "brand_admin" && k !== "outlet_admin"
+        (k) =>
+          k !== "super_admin" &&
+          k !== "brand_admin" &&
+          k !== "outlet_admin"
       );
     }
 
     return [];
   }, [role, allRoleKeys, canManageUsers]);
 
-  // ---------- DUMMY USERS LOAD ----------
-//   useEffect(() => {
-//     setLoadingUsers(true);
-//     let data = [];
+  // ===============================
+  // USERS LIST (real API)
+// ===============================
+  useEffect(() => {
+    let isMounted = true;
 
-//     if (role === "super_admin") {
-//       data = [
-//         {
-//           id: 1,
-//           full_name: "Platform Owner",
-//           email: "owner@platform.com",
-//           phone: "+91 90000 00001",
-//           role: "super_admin",
-//           brand_name: "-",
-//           outlet_name: "-",
-//           is_active: true,
-//         },
-//         {
-//           id: 2,
-//           full_name: "Thanco's Brand Admin",
-//           email: "brand@thancos.com",
-//           phone: "+91 90000 00002",
-//           role: "brand_admin",
-//           brand_name: "Thanco's",
-//           outlet_name: "-",
-//           is_active: true,
-//         },
-//         {
-//           id: 3,
-//           full_name: "Indiranagar Outlet Manager",
-//           email: "indiranagar@thancos.com",
-//           phone: "+91 90000 00003",
-//           role: "outlet_admin",
-//           brand_name: "Thanco's",
-//           outlet_name: "Indiranagar",
-//           is_active: true,
-//         },
-//         {
-//           id: 4,
-//           full_name: "Counter Staff - Indiranagar",
-//           email: "staff.indiranagar@thancos.com",
-//           phone: "+91 90000 00004",
-//           role: "staff",
-//           brand_name: "Thanco's",
-//           outlet_name: "Indiranagar",
-//           is_active: true,
-//         },
-//       ];
-//     } else if (role === "brand_admin") {
-//       data = [
-//         {
-//           id: 11,
-//           full_name: "You (Brand Admin)",
-//           email: user?.email || "brand@mybrand.com",
-//           phone: user?.phone || "+91 90000 00010",
-//           role: "brand_admin",
-//           brand_name: user?.brand_name || "My Brand",
-//           outlet_name: "-",
-//           is_active: true,
-//         },
-//         {
-//           id: 12,
-//           full_name: "Outlet Manager - Jayanagar",
-//           email: "jayanagar@mybrand.com",
-//           phone: "+91 90000 00011",
-//           role: "outlet_admin",
-//           brand_name: user?.brand_name || "My Brand",
-//           outlet_name: "Jayanagar",
-//           is_active: true,
-//         },
-//         {
-//           id: 13,
-//           full_name: "Outlet Manager - HSR",
-//           email: "hsr@mybrand.com",
-//           phone: "+91 90000 00012",
-//           role: "outlet_admin",
-//           brand_name: user?.brand_name || "My Brand",
-//           outlet_name: "HSR Layout",
-//           is_active: true,
-//         },
-//       ];
-//     } else if (role === "outlet_admin") {
-//       data = [
-//         {
-//           id: 21,
-//           full_name: "You (Outlet Admin)",
-//           email: user?.email || "outlet@mybrand.com",
-//           phone: user?.phone || "+91 90000 00020",
-//           role: "outlet_admin",
-//           brand_name: user?.brand_name || "My Brand",
-//           outlet_name: user?.outlet_name || "My Outlet",
-//           is_active: true,
-//         },
-//         {
-//           id: 22,
-//           full_name: "Counter Staff 1",
-//           email: "staff1@outlet.com",
-//           phone: "+91 90000 00021",
-//           role: "staff",
-//           brand_name: user?.brand_name || "My Brand",
-//           outlet_name: user?.outlet_name || "My Outlet",
-//           is_active: true,
-//         },
-//       ];
-//     } else {
-//       // staff
-//       data = [
-//         {
-//           id: 31,
-//           full_name: "Outlet Admin",
-//           email: "admin@outlet.com",
-//           phone: "+91 90000 00030",
-//           role: "outlet_admin",
-//           brand_name: user?.brand_name || "Brand",
-//           outlet_name: user?.outlet_name || "Outlet",
-//           is_active: true,
-//         },
-//         {
-//           id: 32,
-//           full_name: user?.name || "You (Staff)",
-//           email: user?.email || "staff@outlet.com",
-//           phone: user?.phone || "+91 90000 00031",
-//           role: "staff",
-//           brand_name: user?.brand_name || "Brand",
-//           outlet_name: user?.outlet_name || "Outlet",
-//           is_active: true,
-//         },
-//       ];
-//     }
+    async function fetchUsers() {
+      try {
+        setLoadingUsers(true);
 
-//     setTimeout(() => {
-//       setUsers(data);
-//       setLoadingUsers(false);
-//     }, 400);
-//   }, [role, user]);
+        const res = await getUsers();
+        const { data } = res;
 
+        if (!isMounted) return;
 
-
-useEffect(() => {
-  async function fetchRolesFromApi() {
-    setRolesLoading(true);
-    setRolesError(null);
-    try {
-      // If your AuthContext already gives rolesConfig from backend,
-      // you can skip this fetch and only use rolesConfig.
-    //   const res = await fetch("/api/user-roles", {
-    //     credentials: "include",
-    //   });
-
-      const res = await getRoles()
-
-      if (!res.ok) {
-        throw new Error("Failed to load roles");
+        // expecting { data: { data: [...] } }
+        setUsers(data?.data || []);
+      } catch (err) {
+        console.error("Error loading users:", err);
+        if (isMounted) {
+          setUsers([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingUsers(false);
+        }
       }
-
-      const data = await res.json();
-      /**
-       * Expected shape (you can adjust):
-       * {
-       *   roles: [
-       *     { key: "super_admin", label: "...", description: "..." },
-       *     ...
-       *   ],
-       *   permissions: {
-       *     super_admin: {
-       *       manage_outlets: { module: true, actions: { view: true, create: true, ... } },
-       *       manage_orders:  { ... },
-       *       ...
-       *     },
-       *     brand_admin: { ... },
-       *     ...
-       *   }
-       * }
-       */
-
-      const rolesFromBackend =
-        Array.isArray(data.roles) && data.roles.length
-          ? data.roles
-          : rolesConfig && rolesConfig.length
-          ? rolesConfig
-          : DEFAULT_ROLES_CONFIG;
-
-      const permsFromBackend =
-        data.permissions && Object.keys(data.permissions).length
-          ? data.permissions
-          : null;
-
-      setRolesConfigState(rolesFromBackend);
-
-      if (permsFromBackend) {
-        setRolePermissions(permsFromBackend);
-      } else {
-        // fallback: derive from defaultModules + PERMISSIONS (old behaviour)
-        const matrix = {};
-        rolesFromBackend.forEach((r) => {
-          matrix[r.key] = {};
-          PERMISSIONS.forEach((perm) => {
-            const moduleEnabled =
-              r.defaultModules === "all" ||
-              (Array.isArray(r.defaultModules) &&
-                r.defaultModules.includes(perm.key));
-
-            const actionsState = {};
-            perm.actions.forEach((a) => {
-              actionsState[a.key] = moduleEnabled;
-            });
-
-            matrix[r.key][perm.key] = {
-              module: moduleEnabled,
-              actions: actionsState,
-            };
-          });
-        });
-        setRolePermissions(matrix);
-      }
-    } catch (err) {
-      console.error(err);
-      setRolesError(err.message || "Error loading roles");
-      // last resort fallback
-      if (!rolesConfig || !rolesConfig.length) {
-        setRolesConfigState(DEFAULT_ROLES_CONFIG);
-      } else {
-        setRolesConfigState(rolesConfig);
-      }
-    } finally {
-      setRolesLoading(false);
     }
-  }
 
-  fetchRolesFromApi();
-}, [rolesConfig]);
+    fetchUsers();
 
+    return () => {
+      isMounted = false;
+    };
+  }, [role, user]);
 
-  // ---------- FILTERED USERS ----------
+  // ===============================
+  // FILTERED USERS & COUNTS
+  // ===============================
   const filteredUsers = users.filter((u) => {
     const q = search.trim().toLowerCase();
     if (q) {
       const inText =
-        u.full_name.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
+        u.full_name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
         (u.phone && u.phone.toLowerCase().includes(q)) ||
         (u.brand_name && u.brand_name.toLowerCase().includes(q)) ||
         (u.outlet_name && u.outlet_name.toLowerCase().includes(q));
@@ -447,26 +343,24 @@ useEffect(() => {
     return true;
   });
 
-  const roleCounts = useMemo(() => {
-    const counts = {};
-    users.forEach((u) => {
-      if (!u.role) return;
-      counts[u.role] = (counts[u.role] || 0) + 1;
-    });
-    return counts;
-  }, [users]);
+  // const roleCounts = useMemo(() => {
+  //   const counts = {};
+  //   users.forEach((u) => {
+  //     if (!u.role) return;
+  //     counts[u.role] = (counts[u.role] || 0) + 1;
+  //   });
+  //   return counts;
+  // }, [users]);
 
-  const rolesForFilter = useMemo(() => {
-    const keys = Object.keys(roleCounts);
-    return ["all", ...keys];
-  }, [roleCounts]);
+  // const rolesForFilter = useMemo(() => {
+  //   const keys = Object.keys(roleCounts);
+  //   return ["all", ...keys];
+  // }, [roleCounts]);
 
-  const existingRoleKeys = useMemo(
-    () => rolesConfigState.map((r) => r.key),
-    [rolesConfigState]
-  );
-
-  // ---------- HANDLERS: CREATE / UPDATE ROLE ----------
+  // ===============================
+  // EDITING ROLE
+  // ===============================
+  
   async function handleCreateRole(roleConfigNew, permsNew) {
     setRolesConfigState((prev) => [...prev, roleConfigNew]);
 
@@ -495,6 +389,7 @@ useEffect(() => {
 
   async function handleUpdateRole(updatedConfig, updatedPerms) {
     const key = updatedConfig.key;
+
     setRolesConfigState((prev) =>
       prev.map((r) => (r.key === key ? { ...r, ...updatedConfig } : r))
     );
@@ -529,7 +424,9 @@ useEffect(() => {
   const editingPerms =
     editingRoleKey && rolePermissions ? rolePermissions[editingRoleKey] : null;
 
-  // ---------- RENDER ----------
+  // ===============================
+  // RENDER
+  // ===============================
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-6">
       {/* Header */}
@@ -542,6 +439,16 @@ useEffect(() => {
           <p className="text-sm text-slate-500">
             Manage user accounts and define role-based access in one place.
           </p>
+          {rolesLoading && (
+            <p className="text-xs text-slate-400 mt-1">
+              Loading roles & permissions…
+            </p>
+          )}
+          {rolesError && (
+            <p className="text-xs text-red-500 mt-1">
+              {rolesError} (using fallback config)
+            </p>
+          )}
         </div>
       </div>
 
@@ -594,9 +501,8 @@ useEffect(() => {
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
           filteredUsers={filteredUsers}
-          rolesForFilter={rolesForFilter}
+          // rolesForFilter={rolesForFilter}
           rolesConfigState={rolesConfigState}
-          roleCounts={roleCounts}
           getRoleDescription={getRoleDescription}
           editingUser={editingUser}
           setEditingUser={setEditingUser}
@@ -605,7 +511,6 @@ useEffect(() => {
         <PermissionsTab
           canEditRoles={canEditRoles}
           rolesConfigState={rolesConfigState}
-          roleCounts={roleCounts}
           getRoleLabel={getRoleLabel}
           getRoleDescription={getRoleDescription}
           existingRoleKeys={existingRoleKeys}

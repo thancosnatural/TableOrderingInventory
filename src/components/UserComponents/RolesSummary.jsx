@@ -2,7 +2,6 @@ import { ShieldCheck } from "lucide-react";
 
 const RolesSummary = ({
   rolesConfigState,
-  roleCounts,
   getRoleLabel,
   getRoleDescription,
 }) => {
@@ -43,7 +42,7 @@ const RolesSummary = ({
             </div>
             <div className="flex flex-col items-end">
               <span className="text-xs font-semibold text-slate-900">
-                {roleCounts[r.key] ?? 0}
+                {r.user_count}
               </span>
               <span className="text-[10px] text-slate-500">users</span>
             </div>

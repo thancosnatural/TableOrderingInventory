@@ -13,7 +13,6 @@ export default function UsersTab({
   getRoleLabel,
   role,
   user,
-  users,
   setUsers,
   loadingUsers,
   search,
@@ -25,11 +24,11 @@ export default function UsersTab({
   filteredUsers,
   rolesForFilter,
   rolesConfigState,
-  roleCounts,
   getRoleDescription,
   editingUser,
   setEditingUser,
 }) {
+  
   return (
     <>
       {/* Add User (uses UserForm) */}
@@ -92,7 +91,7 @@ export default function UsersTab({
                 onChange={(e) => setRoleFilter(e.target.value)}
                 className="px-3 py-2 rounded-md border border-slate-200 bg-white"
               >
-                {rolesForFilter.map((rKey) => (
+                {rolesForFilter?.map((rKey) => (
                   <option key={rKey} value={rKey}>
                     {rKey === "all" ? "All Roles" : getRoleLabel(rKey)}
                   </option>
@@ -152,7 +151,6 @@ export default function UsersTab({
         {/* Right: roles snapshot */}
         <RolesSummary
           rolesConfigState={rolesConfigState}
-          roleCounts={roleCounts}
           getRoleLabel={getRoleLabel}
           getRoleDescription={getRoleDescription}
         />
