@@ -1,215 +1,294 @@
-// src/pages/BrandsPage.jsx
-import React, { useEffect, useState } from "react";
-import {
-  Building2,
-  Store,
-  Users,
-  Search,
-  Globe2,
-  LayoutDashboard,
-  Loader2,
-  Plus,
-  ChevronRight,
-} from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+// src/pages/Companies.jsx
+import React, { useState, useMemo, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
-export default function BrandsPage() {
-  const { role, user } = useAuth();
+import CompaniesGrid from "@/components/CompanyComponents/CompanyTable";
+import CompanyModal from "@/components/CompanyComponents/CompanyModal";
+import FilterBar from "@/components/CompanyComponents/FilterBar";
+import SearchBar from "@/components/CompanyComponents/SearchBar";
+import { Pagination } from "@/components/ReusableComponents";
+import { useCompanies } from "@/context/CompaniesContext";
 
-  const [brands, setBrands] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+export default function CompaniesPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
 
+  const industryOptions = useMemo(
+    () => ["All", "Agriculture", "SaaS", "Ecommerce", "Healthcare", "Fintech"],
+    []
+  );
+
+  // ---------- URL search params ----------
+  const urlSearchParams = new URLSearchParams(location.search);
+
+  // modal controller: ?company=new or ?company=123
+  const companyParam = urlSearchParams.get("company"); // "new", "123", or null
+  const modalOpen = !!companyParam;
+  const isNew = companyParam === "new";
+  const editingId = !isNew && companyParam ? Number(companyParam) : null;
+
+  // filter + pagination initial values from URL
+  const initialQuery = urlSearchParams.get("q") || "";
+  const initialIndustry = urlSearchParams.get("industry") || "All";
+  const initialPerPage = Number(urlSearchParams.get("perPage")) || 12;
+  const initialPage = Number(urlSearchParams.get("page")) || 1;
+
+  const [query, setQuery] = useState(initialQuery);
+  const [industry, setIndustry] = useState(initialIndustry);
+  const [perPage, setPerPage] = useState(initialPerPage);
+  const [page, setPage] = useState(initialPage);
+
+  const [editing, setEditing] = useState(null);
+
+  const {
+    companies,
+    companiesLoading,
+    companiesTotal,
+    fetchCompanies,
+    addCompany,
+    editCompany,
+    removeCompany,
+    getCompany,
+  } = useCompanies();
+
+  // ---------- Helper: sync q/industry/page/perPage back to URL (keep ?company= if present) ----------
+  const syncQueryInUrl = (next = {}) => {
+    const sp = new URLSearchParams(location.search);
+
+    const q = next.query ?? query;
+    const ind = next.industry ?? industry;
+    const p = next.page ?? page;
+    const limit = next.perPage ?? perPage;
+
+    if (q) sp.set("q", q);
+    else sp.delete("q");
+
+    if (ind && ind !== "All") sp.set("industry", ind);
+    else sp.delete("industry");
+
+    if (p && p !== 1) sp.set("page", String(p));
+    else sp.delete("page");
+
+    if (limit && limit !== 12) sp.set("perPage", String(limit));
+    else sp.delete("perPage");
+
+    // DO NOT TOUCH "company" here — so modal stays open if it was open
+    navigate(`/companies?${sp.toString()}`, { replace: true });
+  };
+
+  // ---------- Fetch companies when filters change ----------
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
+    const run = async () => {
+      try {
+        await fetchCompanies({ query, industry, page, perPage });
+      } catch (e) {
+        if (!cancelled) console.error(e);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [query, industry, page, perPage, fetchCompanies]);
 
-    let data = [];
-
-    if (role === "super_admin") {
-      // platform view – multiple brands
-      data = [
-        {
-          id: 1,
-          name: "Thanco's Natural Ice Cream",
-          code: "THANCOS",
-          country: "India",
-          outletsCount: 90,
-          activeUsers: 120,
-          website: "thancosnatural.com",
-        },
-        {
-          id: 2,
-          name: "Wow Belgian",
-          code: "WOWBEL",
-          country: "India",
-          outletsCount: 12,
-          activeUsers: 28,
-          website: "wowbelgian.com",
-        },
-      ];
-    } else if (role === "brand_admin") {
-      // brand admin – only their brand
-      data = [
-        {
-          id: 101,
-          name: user?.brand_name || "My Brand",
-          code: user?.brand_code || "MYBRAND",
-          country: user?.brand_country || "India",
-          outletsCount: user?.brand_outlets_count || 8,
-          activeUsers: user?.brand_users_count || 20,
-          website: user?.brand_website || "",
-        },
-      ];
-    } else {
-      // outlet_admin / staff – brand of current outlet
-      data = [
-        {
-          id: 201,
-          name: user?.brand_name || "Brand",
-          code: user?.brand_code || "BRAND",
-          country: user?.brand_country || "India",
-          outletsCount: user?.brand_outlets_count || 1,
-          activeUsers: user?.brand_users_count || 5,
-          website: user?.brand_website || "",
-        },
-      ];
+  // ---------- Load company data when ?company=123 (edit mode) ----------
+  useEffect(() => {
+    if (!modalOpen) {
+      setEditing(null);
+      return;
     }
 
-    setTimeout(() => {
-      setBrands(data);
-      setLoading(false);
-    }, 500);
-  }, [role, user]);
+    if (isNew) {
+      // Add mode: empty form
+      setEditing(null);
+      return;
+    }
 
-  const filtered = brands.filter((b) =>
-    b.name.toLowerCase().includes(search.toLowerCase())
-  );
+    if (editingId) {
+      (async () => {
+        try {
+          const resp = await getCompany(editingId);
 
-  const canAddBrand = role === "super_admin";
-  const canManageBrand = role === "super_admin" || role === "brand_admin";
+          // resp can be { data: { data: {...} } } or { data: {...} }
+          const maybeData = resp?.data ?? resp;
+          const data = maybeData?.data ?? maybeData;
 
+          if (!data) {
+            throw new Error("Unexpected response from getCompany()");
+          }
+
+          const normalized = {
+            id: data.id ?? editingId,
+            name: data.name ?? "",
+            legal_name: data.legal_name ?? "",
+            gst_or_tax_id: data.gst_or_tax_id ?? "",
+            logo_url: data.logo_url ?? "",
+            industry: data.industry ?? "",
+            website: data.website ?? "",
+            headquarters: data.headquarters ?? "",
+            verified: !!data.verified,
+            is_active: data.is_active === undefined ? true : !!data.is_active,
+          };
+
+          setEditing(normalized);
+        } catch (err) {
+          console.error("Failed to load company:", err);
+          // if error, close modal by removing company param
+          const sp = new URLSearchParams(location.search);
+          sp.delete("company");
+          navigate(`/companies?${sp.toString()}`, { replace: true });
+        }
+      })();
+    }
+  }, [modalOpen, isNew, editingId, getCompany, location.search, navigate]);
+
+  // ---------- Handlers for filters ----------
+  function handleSearchChange(v) {
+    setQuery(v);
+    setPage(1);
+    syncQueryInUrl({ query: v, page: 1 });
+  }
+
+  function handleIndustryChange(v) {
+    setIndustry(v);
+    setPage(1);
+    syncQueryInUrl({ industry: v, page: 1 });
+  }
+
+  function handlePerPageChange(n) {
+    setPerPage(n);
+    setPage(1);
+    syncQueryInUrl({ perPage: n, page: 1 });
+  }
+
+  function handlePageChange(p) {
+    setPage(p);
+    syncQueryInUrl({ page: p });
+  }
+
+  // ---------- Modal open/close via ?company= ----------
+  function openCreate() {
+    const sp = new URLSearchParams(location.search);
+    sp.set("company", "new");
+    navigate(`/companies?${sp.toString()}`);
+  }
+
+  function handleEditClick(company) {
+    if (!company?.id) return;
+    const sp = new URLSearchParams(location.search);
+    sp.set("company", String(company.id));
+    navigate(`/companies?${sp.toString()}`);
+  }
+
+  function handleCloseModal() {
+    const sp = new URLSearchParams(location.search);
+    sp.delete("company");
+    navigate(`/companies?${sp.toString()}`);
+    setEditing(null);
+  }
+
+  function handleView(company) {
+    // Later you can navigate to /companies/:id if you want details page
+    alert(`Viewing ${company.name}`);
+  }
+
+  // ---------- Save (create or update) ----------
+  async function handleSave(payload) {
+    try {
+      if (editing && editing.id && !isNew) {
+        await editCompany(editing.id, payload);
+      } else {
+        await addCompany(payload);
+      }
+
+      // After save: reset to page 1 and close modal
+      setPage(1);
+      syncQueryInUrl({ page: 1 });
+
+      handleCloseModal();
+    } catch (err) {
+      console.error("save company failed", err);
+      // Let CompanyModal show error by rethrowing
+      throw err;
+    }
+  }
+
+
+  // ---------- RENDER ----------
   return (
-    <div className="max-w-6xl mx-auto flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
-            <Building2 size={22} />
-            Brands
-          </h1>
-          <p className="text-sm text-slate-500">
-            {role === "super_admin"
-              ? "Manage all brands on the platform."
-              : role === "brand_admin"
-              ? "View and configure your brand."
-              : "Brand information for your outlet."}
-          </p>
-        </div>
+    <div className="min-h-screen bg-gray-50 ">
+      <div className="max-w-7xl mx-auto">
+        <header className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Companies</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Manage companies, view details, and edit company information.
+            </p>
+          </div>
 
-        {canAddBrand && (
-          <button className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm rounded-md hover:bg-slate-800">
-            <Plus size={16} />
-            Add Brand
-          </button>
-        )}
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-        />
-        <input
-          type="text"
-          placeholder="Search brands..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-2 rounded-md border border-slate-200 text-sm focus:ring-2 focus:ring-slate-900/10"
-        />
-      </div>
-
-      {/* Content */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-slate-500" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="py-20 text-center text-slate-500">
-          No brands found.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((brand) => (
-            <BrandCard
-              key={brand.id}
-              brand={brand}
-              canManage={canManageBrand}
-              isReadOnly={role === "staff"}
+          <div className="ml-auto flex items-center gap-3 w-full sm:w-auto">
+            <SearchBar
+              value={query}
+              onChange={handleSearchChange}
             />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function BrandCard({ brand, canManage, isReadOnly }) {
-  return (
-    <div className="border border-slate-200 rounded-xl bg-white p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h3 className="font-semibold text-slate-900 text-base line-clamp-1">
-            {brand.name}
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-0.5">
-            Code: <span className="font-mono">{brand.code}</span>
-          </p>
-        </div>
-        <LayoutDashboard className="text-slate-300" size={18} />
-      </div>
-
-      <div className="flex items-center gap-2 text-xs text-slate-600">
-        <Globe2 size={12} className="text-slate-400" />
-        <span>{brand.country}</span>
-      </div>
-
-      {brand.website && (
-        <div className="text-xs text-slate-600">
-          <span className="text-slate-400">Website:</span>{" "}
-          <span className="break-all">{brand.website}</span>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between text-xs text-slate-700 pt-1">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            <Store size={12} className="text-slate-400" />
-            {brand.outletsCount} outlets
+            <button
+              onClick={openCreate}
+              className="px-4 py-2 rounded-md bg-green-600 text-white whitespace-nowrap"
+            >
+              Add company
+            </button>
           </div>
-          <div className="flex items-center gap-1">
-            <Users size={12} className="text-slate-400" />
-            {brand.activeUsers} users
+        </header>
+
+        <div className="bg-white border rounded-lg p-4">
+          <div className="mb-4">
+            <FilterBar
+              industryOptions={industryOptions}
+              selectedIndustry={industry}
+              onSelectIndustry={handleIndustryChange}
+              perPage={perPage}
+              onPerPageChange={handlePerPageChange}
+            />
+          </div>
+
+          <div className="py-2">
+            {companiesLoading ? (
+              <div className="py-12 text-center text-gray-500">
+                Loading companies...
+              </div>
+            ) : companies.length === 0 ? (
+              <div className="py-12 text-center text-gray-500">
+                No companies found.
+              </div>
+            ) : (
+              <CompaniesGrid
+                companies={companies}
+                onEdit={handleEditClick}  // uses ?company=id
+                onView={handleView}
+                onDelete={removeCompany}
+              />
+            )}
+          </div>
+
+          <div className="mt-6">
+            <Pagination
+              page={page}
+              total={companiesTotal}
+              perPage={perPage}
+              onChange={handlePageChange}
+            />
           </div>
         </div>
       </div>
 
-      <div className="pt-3 flex items-center justify-between text-xs">
-        <p className="text-[11px] text-slate-500">
-          {isReadOnly
-            ? "Read-only access to brand info."
-            : canManage
-            ? "You can manage this brand."
-            : "Limited brand visibility."}
-        </p>
-
-        {canManage && !isReadOnly && (
-          <button className="inline-flex items-center gap-1 text-xs text-slate-900 hover:text-slate-600">
-            Brand Settings
-            <ChevronRight size={14} />
-          </button>
-        )}
-      </div>
+      {/* Modal controlled by ?company= */}
+      <CompanyModal
+        open={modalOpen}
+        onClose={handleCloseModal}
+        company={isNew ? null : editing}
+        onSave={handleSave}
+      />
     </div>
   );
 }

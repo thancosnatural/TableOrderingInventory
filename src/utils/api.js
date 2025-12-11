@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAccessToken } from './cookieUtils';
+import { getAccessToken } from './authStorage';
 
 export const API_BASE_URL = 'http://localhost:3000/api';
 

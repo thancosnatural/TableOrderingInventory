@@ -73,36 +73,18 @@ const FALLBACK_MENU = useMemo(
   () => ({
     super_admin: [
       { key: "dashboard", label: "Dashboard", to: "/", icon: LayoutDashboard },
-
       { key: "brands", label: "Brands", to: "/brands", icon: Building2 },
       { key: "outlets", label: "Outlets", to: "/outlets", icon: Store },
-
-      {
-        key: "menu-control",
-        label: "Menu Control",
-        icon: UtensilsCrossed,
-        children: [
-          { key: "products", label: "Products", to: "/menu/products" },
-          { key: "add-product", label: "Add Product", to: "/menu/products/new" },
-          { key: "categories", label: "Categories", to: "/menu/categories" },
-          { key: "addons", label: "Add-ons", to: "/menu/addons" },
-        ],
-      },
-
       { key: "users", label: "Users & Roles", to: "/users", icon: Users },
       { key: "rbac", label: "RBAC", to: "/rbac", icon: ShieldCheck },
-
       { key: "billing", label: "Billing & Subscription", to: "/billing", icon: BadgeDollarSign },
-
       { key: "reports", label: "Reports", to: "/reports", icon: FileBarChart },
       { key: "settings", label: "Settings", to: "/settings", icon: Settings },
     ],
 
     brand_admin: [
       { key: "dashboard", label: "Dashboard", to: "/", icon: LayoutDashboard },
-
       { key: "outlets", label: "Outlets", to: "/outlets", icon: Store },
-
       {
         key: "menu",
         label: "Menu",
@@ -114,44 +96,22 @@ const FALLBACK_MENU = useMemo(
           { key: "addons", label: "Add-ons", to: "/menu/addons" },
         ],
       },
-
       { key: "orders", label: "Orders", to: "/orders", icon: ClipboardList },
       { key: "customers", label: "Customers", to: "/customers", icon: UserCircle },
-
       { key: "offers", label: "Offers & Promotions", to: "/offers", icon: Tag },
-
       { key: "reports", label: "Reports", to: "/reports", icon: FileBarChart },
       { key: "settings", label: "Settings", to: "/settings", icon: Settings },
     ],
 
-    outlet_admin: [
+    branch_admin: [
       { key: "dashboard", label: "Dashboard", to: "/", icon: LayoutDashboard },
-
       { key: "tables", label: "Tables", to: "/tables", icon: Table },
-
       { key: "orders", label: "Orders", to: "/orders", icon: ClipboardList },
       { key: "kot", label: "KOT", to: "/kot", icon: ChefHat },
-
-      // {
-      //   key: "menu",
-      //   label: "Menu",
-      //   icon: UtensilsCrossed,
-      //   children: [
-      //     { key: "products", label: "Products", to: "/menu/products" },
-      //     { key: "add-product", label: "Add Product", to: "/menu/products/new" },
-      //     { key: "categories", label: "Categories", to: "/menu/categories" },
-      //     { key: "addons", label: "Add-ons", to: "/menu/addons" },
-      //   ],
-      // },
-
       { key: "billing", label: "Billing", to: "/billing", icon: Receipt },
-
       { key: "customers", label: "Customers", to: "/customers", icon: UserCircle },
-
       { key: "reports", label: "Reports", to: "/reports", icon: FileBarChart },
-
       { key: "staff", label: "Staff", to: "/staff", icon: Users },
-
       { key: "settings", label: "Settings", to: "/settings", icon: Settings },
     ],
 
