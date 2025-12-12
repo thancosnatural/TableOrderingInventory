@@ -31,15 +31,17 @@ import { AuthProvider } from "./context/AuthContext";
 // import { UsersProvider } from "./context/UsersContext";
 // import { RolesProvider } from "./context/RolesContext";
 import { CompaniesProvider } from "./context/CompaniesContext";
+import { BranchesProvider } from "./context/BranchesContext";
 // import { BranchesProvider } from "./context/BranchesContext";
 
 createRoot(document.getElementById("root")).render(
-  <StrictMode>
+  // <StrictMode>
     <BrowserRouter>
       {/* Auth next, so others can use useAuth */}
       <AuthProvider>
         {/* Companies first, since AuthProvider uses useCompanies */}
         <CompaniesProvider>
+          <BranchesProvider>
           {/* Roles & Users can depend on Auth and Companies */}
           {/* <RolesProvider>
             <UsersProvider> */}
@@ -48,9 +50,9 @@ createRoot(document.getElementById("root")).render(
           <App />
           {/* </BranchesProvider>
             </UsersProvider>
-          </RolesProvider> */}
+          </RolesProvider> */}</BranchesProvider>
         </CompaniesProvider>
       </AuthProvider>
     </BrowserRouter>
-  </StrictMode>
+  // </StrictMode>
 );

@@ -429,7 +429,7 @@ const AppRoutes = () => {
         />
 
         <Route
-          path="outlets"
+          path="branches"
           element={
             <ErrorBoundary>
               <OutletsPage />

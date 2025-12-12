@@ -136,7 +136,7 @@ const CompanyModal = ({ open, onClose, company, onSave }) => {
       setSaving(true);
       await onSave(payload);
       setSaving(false);
-      onClose();
+      // onClose();
     } catch (err) {
       setSaving(false);
       setErrors({ _global: err?.message || "Failed to save company" });

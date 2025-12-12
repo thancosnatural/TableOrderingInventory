@@ -8,6 +8,9 @@ import FilterBar from "@/components/CompanyComponents/FilterBar";
 import SearchBar from "@/components/CompanyComponents/SearchBar";
 import { Pagination } from "@/components/ReusableComponents";
 import { useCompanies } from "@/context/CompaniesContext";
+import { Loader } from "@/components/Loader";
+import EmptyState from "@/components/EmptyState";
+import ErrorState from "@/components/ErrorState";
 
 export default function CompaniesPage() {
   const location = useLocation();
@@ -44,11 +47,15 @@ export default function CompaniesPage() {
     companies,
     companiesLoading,
     companiesTotal,
-    fetchCompanies,
     addCompany,
     editCompany,
     removeCompany,
     getCompany,
+    apiStatus,
+    API_STATUS_CONSTANTS,
+    fetchCompanies,
+    lastQuery,
+    error,
   } = useCompanies();
 
   // ---------- Helper: sync q/industry/page/perPage back to URL (keep ?company= if present) ----------
@@ -76,72 +83,38 @@ export default function CompaniesPage() {
     navigate(`/companies?${sp.toString()}`, { replace: true });
   };
 
-  // ---------- Fetch companies when filters change ----------
-  useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      try {
-        await fetchCompanies({ query, industry, page, perPage });
-      } catch (e) {
-        if (!cancelled) console.error(e);
-      }
-    };
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [query, industry, page, perPage, fetchCompanies]);
-
   // ---------- Load company data when ?company=123 (edit mode) ----------
   useEffect(() => {
+    // Modal closed: clear editing state
     if (!modalOpen) {
       setEditing(null);
       return;
     }
 
+    // New company: empty form
     if (isNew) {
-      // Add mode: empty form
       setEditing(null);
       return;
     }
 
+    // Editing: load from context
     if (editingId) {
       (async () => {
-        try {
-          const resp = await getCompany(editingId);
+        // getCompany handles try/catch + toasts and returns data or null
+        const { data } = await getCompany(editingId);
 
-          // resp can be { data: { data: {...} } } or { data: {...} }
-          const maybeData = resp?.data ?? resp;
-          const data = maybeData?.data ?? maybeData;
-
-          if (!data) {
-            throw new Error("Unexpected response from getCompany()");
-          }
-
-          const normalized = {
-            id: data.id ?? editingId,
-            name: data.name ?? "",
-            legal_name: data.legal_name ?? "",
-            gst_or_tax_id: data.gst_or_tax_id ?? "",
-            logo_url: data.logo_url ?? "",
-            industry: data.industry ?? "",
-            website: data.website ?? "",
-            headquarters: data.headquarters ?? "",
-            verified: !!data.verified,
-            is_active: data.is_active === undefined ? true : !!data.is_active,
-          };
-
-          setEditing(normalized);
-        } catch (err) {
-          console.error("Failed to load company:", err);
-          // if error, close modal by removing company param
+        if (!data) {
+          // If context already showed error, we just close the modal
           const sp = new URLSearchParams(location.search);
           sp.delete("company");
           navigate(`/companies?${sp.toString()}`, { replace: true });
+          return;
         }
+
+        setEditing(data);
       })();
     }
-  }, [modalOpen, isNew, editingId, getCompany, location.search, navigate]);
+  }, [modalOpen, isNew, editingId]);
 
   // ---------- Handlers for filters ----------
   function handleSearchChange(v) {
@@ -195,29 +168,65 @@ export default function CompaniesPage() {
 
   // ---------- Save (create or update) ----------
   async function handleSave(payload) {
-    try {
-      if (editing && editing.id && !isNew) {
-        await editCompany(editing.id, payload);
-      } else {
-        await addCompany(payload);
-      }
+    const isEditingExisting = !!editing && !!editing.id && !isNew;
 
-      // After save: reset to page 1 and close modal
-      setPage(1);
-      syncQueryInUrl({ page: 1 });
-
-      handleCloseModal();
-    } catch (err) {
-      console.error("save company failed", err);
-      // Let CompanyModal show error by rethrowing
-      throw err;
+    let ok;
+    if (isEditingExisting) {
+      ok = await editCompany(editing.id, payload);
+    } else {
+      ok = await addCompany(payload);
     }
+
+    if (!ok) return;
+
+    setPage(1);
+    syncQueryInUrl({ page: 1 });
+    handleCloseModal();
   }
 
-
   // ---------- RENDER ----------
+
+  const renderContent = () => {
+    if (companiesLoading && apiStatus === API_STATUS_CONSTANTS.LOADING) {
+      return <Loader />;
+    }
+
+    switch (apiStatus) {
+      case API_STATUS_CONSTANTS.LOADING:
+        return <Loader />;
+
+      case API_STATUS_CONSTANTS.FAILURE:
+        return (
+          <ErrorState
+            error={error}
+            title="Failed to load companies"
+            description="Something went wrong while fetching company data."
+            onRetry={() => fetchCompanies(lastQuery)}
+            retryLabel="Retry"
+          />
+        );
+
+      case API_STATUS_CONSTANTS.SUCCESS:
+        if (!companies || companies.length === 0) {
+          return <EmptyState />;
+        }
+        return (
+          <CompaniesGrid
+            companies={companies}
+            onEdit={handleEditClick}
+            onView={handleView}
+            onDelete={removeCompany}
+          />
+        );
+
+      case API_STATUS_CONSTANTS.INITIAL:
+      default:
+        return <Loader />;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 ">
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
           <div>
@@ -228,10 +237,7 @@ export default function CompaniesPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-3 w-full sm:w-auto">
-            <SearchBar
-              value={query}
-              onChange={handleSearchChange}
-            />
+            <SearchBar value={query} onChange={handleSearchChange} />
             <button
               onClick={openCreate}
               className="px-4 py-2 rounded-md bg-green-600 text-white whitespace-nowrap"
@@ -252,24 +258,7 @@ export default function CompaniesPage() {
             />
           </div>
 
-          <div className="py-2">
-            {companiesLoading ? (
-              <div className="py-12 text-center text-gray-500">
-                Loading companies...
-              </div>
-            ) : companies.length === 0 ? (
-              <div className="py-12 text-center text-gray-500">
-                No companies found.
-              </div>
-            ) : (
-              <CompaniesGrid
-                companies={companies}
-                onEdit={handleEditClick}  // uses ?company=id
-                onView={handleView}
-                onDelete={removeCompany}
-              />
-            )}
-          </div>
+          <div className="py-2">{renderContent()}</div>
 
           <div className="mt-6">
             <Pagination
@@ -282,7 +271,6 @@ export default function CompaniesPage() {
         </div>
       </div>
 
-      {/* Modal controlled by ?company= */}
       <CompanyModal
         open={modalOpen}
         onClose={handleCloseModal}

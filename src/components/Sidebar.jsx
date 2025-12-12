@@ -73,8 +73,8 @@ const FALLBACK_MENU = useMemo(
   () => ({
     super_admin: [
       { key: "dashboard", label: "Dashboard", to: "/", icon: LayoutDashboard },
-      { key: "brands", label: "Brands", to: "/brands", icon: Building2 },
-      { key: "outlets", label: "Outlets", to: "/outlets", icon: Store },
+      { key: "companies", label: "Companies", to: "/companies", icon: Building2 },
+      { key: "outlets", label: "Outlets", to: "/branches", icon: Store },
       { key: "users", label: "Users & Roles", to: "/users", icon: Users },
       { key: "rbac", label: "RBAC", to: "/rbac", icon: ShieldCheck },
       { key: "billing", label: "Billing & Subscription", to: "/billing", icon: BadgeDollarSign },
@@ -117,15 +117,10 @@ const FALLBACK_MENU = useMemo(
 
     staff: [
       { key: "dashboard", label: "Dashboard", to: "/", icon: LayoutDashboard },
-
       { key: "orders", label: "Orders", to: "/orders", icon: ClipboardList },
-
       { key: "kot", label: "Kitchen Orders", to: "/kot", icon: ChefHat },
-
       { key: "tables", label: "Tables", to: "/tables", icon: Table },
-
       { key: "billing", label: "Billing", to: "/billing", icon: Receipt },
-
       { key: "profile", label: "My Profile", to: "/profile", icon: User },
     ],
   }),
