@@ -13,4 +13,4 @@ export const getRoles = (params = {}, options = {}) =>
   apiClient.get(`/roles`, { params, ...options });
 
 export const getRole = (id, options = {}) =>
-  apiClient.get(`/users/${id}`, { ...options });
+  apiClient.get(`/roles/${id}`, { ...options });

@@ -1,4 +1,4 @@
-// src/components/CompaniesTable.jsx
+// src/components/RoleComponents/RolesTable.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -40,7 +40,7 @@ function MenuPortal({ anchorRect, open, children, menuWidth = 200, gap = 8 }) {
   if (left < 8) left = 8;
   if (left + menuWidth + 8 > vw) left = Math.max(8, vw - menuWidth - 8);
 
-  const estimatedMenuHeight = 220;
+  const estimatedMenuHeight = 200;
   if (top + estimatedMenuHeight + 8 > vh) {
     top = Math.max(8, rect.top - estimatedMenuHeight - gap);
   }
@@ -64,7 +64,7 @@ function MenuPortal({ anchorRect, open, children, menuWidth = 200, gap = 8 }) {
 }
 
 /* ---------- Full-screen action sheet (mobile) ---------- */
-function ActionSheet({ open, company, onClose, children }) {
+function ActionSheet({ open, role, onClose, children }) {
   const elRef = useRef(null);
   if (!elRef.current && typeof document !== "undefined") {
     elRef.current = document.createElement("div");
@@ -94,15 +94,18 @@ function ActionSheet({ open, company, onClose, children }) {
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full bg-white rounded-t-xl shadow-lg p-4 max-h-[60vh] overflow-auto">
         <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-3" />
-        {company && (
+
+        {role && (
           <div className="mb-2">
             <div className="text-sm text-gray-500">Actions for</div>
             <div className="text-base font-semibold text-gray-900">
-              {company.name}
+              {role.name || role.code || "Role"}
             </div>
           </div>
         )}
+
         <div>{children}</div>
+
         <div className="mt-3">
           <button
             onClick={onClose}
@@ -117,7 +120,7 @@ function ActionSheet({ open, company, onClose, children }) {
   );
 }
 
-/* ---------- Confirm modal (used for delete / toggle) ---------- */
+/* ---------- Confirm modal (used for delete / deactivate) ---------- */
 function ConfirmModal({
   open,
   title,
@@ -190,34 +193,35 @@ function ConfirmModal({
   );
 }
 
-/* ---------- Main CompaniesTable component ---------- */
-export default function CompaniesTable({
-  companies = [],
+/* ---------- Main RolesTable component ---------- */
+export default function RolesTable({
+  roles = [],
   onEdit,
   onView,
   loading = false,
-  onDelete, // comes from context, handles API + errors
+  onDelete,
+  onToggleActive, // optional: (role) => Promise
 }) {
-  const [rows, setRows] = useState(companies || []);
+  const [rows, setRows] = useState(roles || []);
   const [actionLoading, setActionLoading] = useState({});
   const [openMenuId, setOpenMenuId] = useState(null);
   const [menuAnchorRect, setMenuAnchorRect] = useState(null);
 
   // mobile action sheet state
   const [isMobile, setIsMobile] = useState(false);
-  const [mobileSheet, setMobileSheet] = useState({ open: false, company: null });
+  const [mobileSheet, setMobileSheet] = useState({ open: false, role: null });
 
   // confirm modal state
   const [confirmModal, setConfirmModal] = useState({
     open: false,
-    type: null,
-    company: null,
+    type: null, // "delete" | "active"
+    role: null,
     loading: false,
   });
 
   useEffect(() => {
-    setRows(companies || []);
-  }, [companies]);
+    setRows(roles || []);
+  }, [roles]);
 
   // detect mobile on mount and on resize
   useEffect(() => {
@@ -228,16 +232,6 @@ export default function CompaniesTable({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const getInitials = (name) =>
-    !name
-      ? "--"
-      : name
-          .split(" ")
-          .filter(Boolean)
-          .slice(0, 2)
-          .map((w) => w[0]?.toUpperCase() ?? "")
-          .join("");
-
   const setRowLoading = (id, kind, val) =>
     setActionLoading((prev) => ({
       ...prev,
@@ -245,14 +239,14 @@ export default function CompaniesTable({
     }));
 
   // open menu: desktop -> portal menu; mobile -> action sheet
-  const onOpenMenu = (e, id, company) => {
+  const onOpenMenu = (e, id, role) => {
     e.stopPropagation();
     const btn = e.currentTarget;
     const rect = btn.getBoundingClientRect();
     setMenuAnchorRect(rect);
 
     if (isMobile) {
-      setMobileSheet({ open: true, company });
+      setMobileSheet({ open: true, role });
       setOpenMenuId(null);
     } else {
       setOpenMenuId((prev) => (prev === id ? null : id));
@@ -260,38 +254,41 @@ export default function CompaniesTable({
   };
 
   // open confirm modal
-  const openConfirm = (type, company) => {
-    setConfirmModal({ open: true, type, company, loading: false });
+  const openConfirm = (type, role) => {
+    setConfirmModal({ open: true, type, role, loading: false });
     setOpenMenuId(null);
-    setMobileSheet({ open: false, company: null });
+    setMobileSheet({ open: false, role: null });
   };
 
   const closeConfirm = () =>
-    setConfirmModal({ open: false, type: null, company: null, loading: false });
+    setConfirmModal({ open: false, type: null, role: null, loading: false });
 
-  // perform delete – API + error handled in context
   const performDelete = async () => {
-    const company = confirmModal.company;
-    if (!company) return;
-    const id = company.id;
+    const r = confirmModal.role;
+    if (!r?.id) return;
 
     setConfirmModal((s) => ({ ...s, loading: true }));
-    setRowLoading(id, "delete", true);
+    setRowLoading(r.id, "delete", true);
 
-    // Context (onDelete) does the API call + error handling.
-    await onDelete(id);
+    await onDelete?.(r.id);
 
-    // After context updates `companies`, rows will sync via useEffect.
-    setConfirmModal({
-      open: false,
-      type: null,
-      company: null,
-      loading: false,
-    });
-    setRowLoading(id, "delete", false);
+    setRowLoading(r.id, "delete", false);
+    closeConfirm();
   };
 
-  // kebab icon
+  const performToggleActive = async () => {
+    const r = confirmModal.role;
+    if (!r?.id || !onToggleActive) return;
+
+    setConfirmModal((s) => ({ ...s, loading: true }));
+    setRowLoading(r.id, "active", true);
+
+    await onToggleActive(r);
+
+    setRowLoading(r.id, "active", false);
+    closeConfirm();
+  };
+
   const KebabIcon = ({ size = 18 }) => (
     <svg
       width={size}
@@ -308,12 +305,12 @@ export default function CompaniesTable({
   useEffect(() => {
     const onDocClick = () => {
       setOpenMenuId(null);
-      setMobileSheet({ open: false, company: null });
+      setMobileSheet({ open: false, role: null });
     };
     const onEsc = (e) => {
       if (e.key === "Escape") {
         setOpenMenuId(null);
-        setMobileSheet({ open: false, company: null });
+        setMobileSheet({ open: false, role: null });
       }
     };
     document.addEventListener("click", onDocClick);
@@ -324,21 +321,24 @@ export default function CompaniesTable({
     };
   }, []);
 
-  /* ---------- UI: Desktop table ---------- */
+  const getScope = (r) => r?.scope_type || r?.scopeType || "—";
+  const isActive = (r) => (r?.is_active === undefined ? true : !!r?.is_active);
+
+  /* ---------- Desktop table ---------- */
   const DesktopTable = () => (
     <div className="hidden md:block overflow-x-auto overflow-visible rounded-xl border bg-white">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
-              Company
+              Role
             </th>
             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
-              Industry
+              Code
             </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
-              Location
-            </th>
+            {/* <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+              Scope
+            </th> */}
             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
               Status
             </th>
@@ -352,114 +352,125 @@ export default function CompaniesTable({
           {loading ? (
             <tr>
               <td
-                colSpan={6}
+                colSpan={5}
                 className="px-4 py-6 text-center text-sm text-gray-500"
               >
-                Loading companies...
+                Loading roles...
               </td>
             </tr>
           ) : rows.length === 0 ? (
             <tr>
               <td
-                colSpan={6}
+                colSpan={5}
                 className="px-4 py-6 text-center text-sm text-gray-500"
               >
-                No companies found.
+                No roles found.
               </td>
             </tr>
           ) : (
-            rows.map((company) => {
-              const id = company.id;
-              const isActive = !!company.is_active;
+            rows.map((r) => {
+              const id = r.id;
               const loadingDelete = actionLoading[id]?.delete;
-              const isMenuOpen = openMenuId === id;
+              const loadingActive = actionLoading[id]?.active;
+              const menuOpen = openMenuId === id;
 
               return (
-                <tr
-                  key={id ?? company.name}
-                  className="hover:bg-gray-50 transition"
-                >
+                <tr key={id ?? r.code} className="hover:bg-gray-50 transition">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-semibold">
-                        {getInitials(company?.name)}
+                        {(r?.display_name || r?.key || "R").slice(0, 1).toUpperCase()}
                       </div>
                       <div>
                         <div className="font-medium text-gray-900">
-                          {company?.name ?? "—"}
+                          {r?.display_name ?? "—"}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {company.industry ?? ""}
+                          {r?.description ?? ""}
                         </div>
                       </div>
                     </div>
                   </td>
 
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    {company?.industry ?? "—"}
+                    {r?.key ?? "—"}
                   </td>
 
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {company?.headquarters ?? "—"}
-                  </td>
+                  {/* <td className="px-4 py-3 text-sm text-gray-700">
+                    {getScope(r)}
+                  </td> */}
 
-                  <td className="px-4 py-3 text-center">
-                    {company?.verified ? (
-                      <span className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded-full">
-                        Verified
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 text-xs bg-yellow-50 text-yellow-700 rounded-full">
-                        Unverified
-                      </span>
-                    )}
-                    <div
-                      className={`mt-1 text-xs ${
-                        isActive ? "text-green-500" : "text-gray-500"
+                  <td className="px-4 py-3 text-sm">
+                    <span
+                      className={`inline-flex w-fit px-2 py-1 text-xs rounded-full ${
+                        isActive(r)
+                          ? "bg-green-50 text-green-700"
+                          : "bg-gray-100 text-gray-700"
                       }`}
                     >
-                      {isActive ? "Active" : "Disabled"}
-                    </div>
+                      {isActive(r) ? "Active" : "Disabled"}
+                    </span>
                   </td>
 
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={(e) => onOpenMenu(e, id, company)}
+                      onClick={(e) => onOpenMenu(e, id, r)}
                       className="p-2 rounded-md hover:bg-gray-100 inline-flex items-center justify-center"
                       aria-haspopup="true"
-                      aria-expanded={isMenuOpen}
+                      aria-expanded={menuOpen}
                       title="Actions"
                     >
                       <span className="sr-only">Open actions</span>
                       <KebabIcon />
                     </button>
 
-                    <MenuPortal anchorRect={menuAnchorRect} open={isMenuOpen}>
+                    <MenuPortal anchorRect={menuAnchorRect} open={menuOpen}>
                       <div className="py-1">
                         <button
                           onClick={() => {
                             setOpenMenuId(null);
-                            onView(company);
+                            onView?.(r);
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
                           View
                         </button>
 
-                          <button
+                        <button
                           onClick={() => {
                             setOpenMenuId(null);
-                            onEdit(company);
+                            onEdit?.(r);
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
                           Edit
                         </button>
 
+                        {onToggleActive ? (
+                          <>
+                            <div className="border-t my-1" />
+                            <button
+                              onClick={() => openConfirm("active", r)}
+                              disabled={loadingActive}
+                              className={`w-full text-left px-4 py-2 text-sm ${
+                                loadingActive
+                                  ? "opacity-60 cursor-wait text-gray-400"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {loadingActive
+                                ? "..."
+                                : isActive(r)
+                                ? "Disable"
+                                : "Enable"}
+                            </button>
+                          </>
+                        ) : null}
+
                         <div className="border-t my-1" />
 
                         <button
-                          onClick={() => openConfirm("delete", company)}
+                          onClick={() => openConfirm("delete", r)}
                           disabled={loadingDelete}
                           className={`w-full text-left px-4 py-2 text-sm ${
                             loadingDelete
@@ -486,78 +497,60 @@ export default function CompaniesTable({
     <div className="md:hidden space-y-3">
       {loading ? (
         <div className="p-4 text-center text-sm text-gray-500">
-          Loading companies...
+          Loading roles...
         </div>
       ) : rows.length === 0 ? (
         <div className="p-4 text-center text-sm text-gray-500">
-          No companies found.
+          No roles found.
         </div>
       ) : (
-        rows.map((company) => {
-          const id = company.id;
-          const isActive = !!company.is_active;
-          const loadingDelete = actionLoading[id]?.delete;
+        rows.map((r) => {
+          const id = r.id;
 
           return (
             <article
-              key={id ?? company.name}
+              key={id ?? r.code}
               className="bg-white border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-semibold">
-                    {getInitials(company?.name)}
+                    {(r?.display_name || "R").slice(0, 1).toUpperCase()}
                   </div>
                   <div>
                     <div className="font-medium text-gray-900">
-                      {company?.name ?? "—"}
+                      {r?.display_name ?? "—"}
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {company?.industry ?? "—"}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {company?.headquarters ?? "—"}
+                    <div className="text-xs text-gray-500">{r?.key ?? "—"}</div>
+
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {/* <span className="px-2 py-1 text-xs rounded-full bg-indigo-50 text-indigo-700">
+                        {getScope(r)}
+                      </span> */}
+
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          isActive(r)
+                            ? "bg-green-50 text-green-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {isActive(r) ? "Active" : "Disabled"}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
-                  <div className="text-xs text-gray-500">
-                    {typeof company?.employees === "number"
-                      ? `${company.employees} emp`
-                      : company?.employees ?? "—"}
-                  </div>
-                  <div className="text-xs">
-                    {company?.verified ? (
-                      <span className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded-full">
-                        Verified
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 text-xs bg-yellow-50 text-yellow-700 rounded-full">
-                        Unverified
-                      </span>
-                    )}
-                  </div>
-
-                  <div
-                    className={`mt-1 text-xs ${
-                      isActive ? "text-green-500" : "text-gray-500"
-                    }`}
+                <div className="mt-1">
+                  <button
+                    onClick={(e) => onOpenMenu(e, id, r)}
+                    className="p-2 rounded-md hover:bg-gray-100 inline-flex items-center justify-center"
+                    aria-haspopup="true"
+                    title="Actions"
                   >
-                    {isActive ? "Active" : "Disabled"}
-                  </div>
-
-                  <div className="mt-2">
-                    <button
-                      onClick={(e) => onOpenMenu(e, id, company)}
-                      className="p-2 rounded-md hover:bg-gray-100 inline-flex items-center justify-center"
-                      aria-haspopup="true"
-                      title="Actions"
-                    >
-                      <span className="sr-only">Open actions</span>
-                      <KebabIcon />
-                    </button>
-                  </div>
+                    <span className="sr-only">Open actions</span>
+                    <KebabIcon />
+                  </button>
                 </div>
               </div>
             </article>
@@ -568,17 +561,18 @@ export default function CompaniesTable({
   );
 
   /* ---------- Action sheet content for mobile ---------- */
-  const MobileActionContent = ({ company }) => {
-    if (!company) return null;
-    const id = company.id;
+  const MobileActionContent = ({ role }) => {
+    if (!role) return null;
+    const id = role.id;
     const loadingDelete = actionLoading[id]?.delete;
+    const loadingActive = actionLoading[id]?.active;
 
     return (
       <div className="space-y-2">
         <button
           onClick={() => {
-            setMobileSheet({ open: false, company: null });
-            onView(company);
+            setMobileSheet({ open: false, role: null });
+            onView?.(role);
           }}
           className="w-full text-left px-4 py-3 rounded-md hover:bg-gray-50"
         >
@@ -587,18 +581,33 @@ export default function CompaniesTable({
 
         <button
           onClick={() => {
-            setMobileSheet({ open: false, company: null });
-            onEdit(company);
+            setMobileSheet({ open: false, role: null });
+            onEdit?.(role);
           }}
           className="w-full text-left px-4 py-3 rounded-md hover:bg-gray-50"
         >
           Edit
         </button>
 
+        {onToggleActive ? (
+          <>
+            <div className="border-t my-1" />
+            <button
+              onClick={() => openConfirm("active", role)}
+              disabled={loadingActive}
+              className={`w-full text-left px-4 py-3 rounded-md ${
+                loadingActive ? "opacity-60 cursor-wait" : "hover:bg-gray-50"
+              }`}
+            >
+              {loadingActive ? "..." : isActive(role) ? "Disable" : "Enable"}
+            </button>
+          </>
+        ) : null}
+
         <div className="border-t my-1" />
 
         <button
-          onClick={() => openConfirm("delete", company)}
+          onClick={() => openConfirm("delete", role)}
           disabled={loadingDelete}
           className={`w-full text-left px-4 py-3 rounded-md text-red-600 ${
             loadingDelete ? "opacity-60 cursor-wait" : "hover:bg-red-50"
@@ -610,32 +619,49 @@ export default function CompaniesTable({
     );
   };
 
+  const confirmTitle =
+    confirmModal.type === "delete"
+      ? `Delete role "${confirmModal.role?.name || confirmModal.role?.code || ""}"?`
+      : `${isActive(confirmModal.role) ? "Disable" : "Enable"} role "${
+          confirmModal.role?.name || confirmModal.role?.code || ""
+        }"?`;
+
+  const confirmDesc =
+    confirmModal.type === "delete"
+      ? "This action will permanently remove the role. This cannot be undone."
+      : `This will ${isActive(confirmModal.role) ? "disable" : "enable"} this role immediately.`;
+
+  const confirmLabel =
+    confirmModal.type === "delete"
+      ? "Delete"
+      : isActive(confirmModal.role)
+      ? "Disable"
+      : "Enable";
+
+  const confirmAction =
+    confirmModal.type === "delete" ? performDelete : performToggleActive;
+
   return (
     <>
-      {/* Desktop table */}
       <DesktopTable />
-
-      {/* Mobile list */}
       <MobileList />
 
-      {/* Mobile action sheet */}
       <ActionSheet
         open={mobileSheet.open}
-        company={mobileSheet.company}
-        onClose={() => setMobileSheet({ open: false, company: null })}
+        role={mobileSheet.role}
+        onClose={() => setMobileSheet({ open: false, role: null })}
       >
-        <MobileActionContent company={mobileSheet.company} />
+        <MobileActionContent role={mobileSheet.role} />
       </ActionSheet>
 
-      {/* Confirm delete modal */}
       <ConfirmModal
-        open={confirmModal.open && confirmModal.type === "delete"}
-        title={`Delete company "${confirmModal.company?.name ?? ""}"?`}
-        description="This action will permanently remove the company. This cannot be undone."
-        confirmLabel="Delete"
+        open={confirmModal.open}
+        title={confirmTitle}
+        description={confirmDesc}
+        confirmLabel={confirmLabel}
         cancelLabel="Cancel"
         loading={confirmModal.loading}
-        onConfirm={performDelete}
+        onConfirm={confirmAction}
         onCancel={closeConfirm}
       />
     </>

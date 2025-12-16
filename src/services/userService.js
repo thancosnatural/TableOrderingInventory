@@ -6,6 +6,9 @@ export const createUser = (payload) =>
 export const getUsers = (params = {}, options = {}) =>
   apiClient.get(`/users`, { params, ...options });
 
+export const getUser = (id) => 
+  apiClient.get(`/users/${id}`);
+
 export const getMe = () => 
   apiClient.get(`/users/me`);
 

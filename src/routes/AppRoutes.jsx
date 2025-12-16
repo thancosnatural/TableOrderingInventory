@@ -288,6 +288,8 @@ import AddOnsPage from "@/pages/AddOns";
 import RoleBasedLogin from "@/pages/Login";
 import ResetPasswordPage from "@/pages/ResetPassword";
 import ForgotPasswordPage from "@/pages/ForgotPassword";
+import UsersPage from "@/pages/Users";
+import RolesPage from "@/pages/Roles";
 
 // Lazy pages
 const Home = lazy(() => import("../pages/Home"));
@@ -433,6 +435,24 @@ const AppRoutes = () => {
           element={
             <ErrorBoundary>
               <OutletsPage />
+            </ErrorBoundary>
+          }
+        />
+
+         <Route
+          path="users"
+          element={
+            <ErrorBoundary>
+              <UsersPage />
+            </ErrorBoundary>
+          }
+        />
+
+         <Route
+          path="roles"
+          element={
+            <ErrorBoundary>
+              <RolesPage />
             </ErrorBoundary>
           }
         />

@@ -1,82 +1,68 @@
-// // src/pages/Users.jsx
-// import React, { useState, useMemo, useEffect, useRef } from "react";
+// // src/pages/Roles.jsx
+// import React, { useState, useEffect, useRef } from "react";
 // import { useLocation, useNavigate } from "react-router-dom";
 
 // import { Pagination } from "@/components/ReusableComponents";
-// import { useUsers } from "@/context/UsersContext";
 // import { Loader } from "@/components/Loader";
 // import EmptyState from "@/components/EmptyState";
 // import ErrorState from "@/components/ErrorState";
 
-// import UsersTable from "@/components/UserComponents/UserTable";
-// import UserModal from "@/components/UserComponents/UserModal";
-// import FilterBar from "@/components/UserComponents/FilterBar";
-// import SearchBar from "@/components/UserComponents/SearchBar";
 // import { useRoles } from "@/context/RolesContext";
 
-// export default function UsersPage() {
+// // ✅ create these (same pattern as Users)
+// import RolesTable from "@/components/RolesComponents/RoleTable";
+// import RoleModal from "@/components/RolesComponents/RoleModal";
+// import SearchBar from "@/components/RolesComponents/SearchBar";
+
+// export default function RolesPage() {
 //   const location = useLocation();
 //   const navigate = useNavigate();
-
-//   // example role options (edit as you want)
-//   const roleOptions = useMemo(
-//     () => ["All", "super_admin", "company_admin", "branch_admin", "staff"],
-//     []
-//   );
 
 //   // ---------- URL search params ----------
 //   const urlSearchParams = new URLSearchParams(location.search);
 
-//   // modal controller: ?user=new or ?user=123
-//   const userParam = urlSearchParams.get("user"); // "new", "123", or null
-//   const modalOpen = !!userParam;
-//   const isNew = userParam === "new";
-//   const editingId = !isNew && userParam ? Number(userParam) : null;
+//   // modal controller: ?role=new or ?role=123
+//   const roleParam = urlSearchParams.get("role"); // "new", "123", or null
+//   const modalOpen = !!roleParam;
+//   const isNew = roleParam === "new";
+//   const editingId = !isNew && roleParam ? Number(roleParam) : null;
 
-//   // filters + pagination initial values from URL
+//   // pagination initial values from URL
 //   const initialQuery = urlSearchParams.get("q") || "";
-//   const initialRole = urlSearchParams.get("role") || "All";
 //   const initialPerPage = Number(urlSearchParams.get("perPage")) || 12;
 //   const initialPage = Number(urlSearchParams.get("page")) || 1;
 
 //   const [query, setQuery] = useState(initialQuery);
-//   const [role, setRole] = useState(initialRole);
 //   const [perPage, setPerPage] = useState(initialPerPage);
 //   const [page, setPage] = useState(initialPage);
 
 //   const [editing, setEditing] = useState(null);
 
 //   const {
-//     users,
-//     usersLoading,
-//     usersTotal,
-//     addUser,
-//     editUser,
-//     removeUser,
-//     getUser,
+//     roles,
+//     rolesLoading,
+//     rolesTotal,
+//     addRole,
+//     editRole,
+//     removeRole,
+//     getRole,
 //     apiStatus,
 //     API_STATUS_CONSTANTS,
-//     fetchUsers,
+//     fetchRoles,
 //     lastQuery,
 //     error,
-//   } = useUsers();
+//   } = useRoles();
 
-//   const { roles } = useRoles()
-
-//   // ---------- Helper: sync q/role/page/perPage back to URL (keep ?user= if present) ----------
+//   // ---------- Helper: sync q/page/perPage back to URL (keep ?role= if present) ----------
 //   const syncQueryInUrl = (next = {}) => {
 //     const sp = new URLSearchParams(location.search);
 
 //     const q = next.query ?? query;
-//     const r = next.role ?? role;
 //     const p = next.page ?? page;
 //     const limit = next.perPage ?? perPage;
 
 //     if (q) sp.set("q", q);
 //     else sp.delete("q");
-
-//     if (r && r !== "All") sp.set("role", r);
-//     else sp.delete("role");
 
 //     if (p && p !== 1) sp.set("page", String(p));
 //     else sp.delete("page");
@@ -84,64 +70,53 @@
 //     if (limit && limit !== 12) sp.set("perPage", String(limit));
 //     else sp.delete("perPage");
 
-//     // DO NOT TOUCH "user" here — modal stays open if it was open
-//     navigate(`/users?${sp.toString()}`, { replace: true });
+//     // DO NOT TOUCH "role" here — modal stays open if it was open
+//     navigate(`/roles?${sp.toString()}`, { replace: true });
 //   };
 
-//   // ---------- Load user data when ?user=123 (edit mode) ----------
-//   const lastFetchedIdRef = useRef(null);
-  
-//   useEffect(() => {
-//     if (!modalOpen) {
-//       setEditing(null);
-//       lastFetchedIdRef.current = null;
-//       return;
-//     }
-  
-//     if (isNew) {
-//       setEditing(null);
-//       lastFetchedIdRef.current = null;
-//       return;
-//     }
-  
-//     if (!editingId) return;
-  
-//     // ✅ prevent duplicate calls for same id
-//     if (lastFetchedIdRef.current === editingId) return;
-//     lastFetchedIdRef.current = editingId;
-  
-//     (async () => {
-//       const {data} = await getUser(editingId);
-  
-//       if (!data) {
-//         const sp = new URLSearchParams(location.search);
-//         sp.delete("role");
-//         navigate(`/roles?${sp.toString()}`, { replace: true });
-//         return;
-//       }
-  
-//       setEditing(data);
-//     })();
-//   }, [modalOpen, isNew, editingId, getUser, location.search, navigate]);
-  
+//   // ---------- Load role data when ?role=123 (edit mode) ----------
+// const lastFetchedIdRef = useRef(null);
 
-//   // ---------- Handlers for filters ----------
+// useEffect(() => {
+//   if (!modalOpen) {
+//     setEditing(null);
+//     lastFetchedIdRef.current = null;
+//     return;
+//   }
+
+//   if (isNew) {
+//     setEditing(null);
+//     lastFetchedIdRef.current = null;
+//     return;
+//   }
+
+//   if (!editingId) return;
+
+//   // ✅ prevent duplicate calls for same id
+//   if (lastFetchedIdRef.current === editingId) return;
+//   lastFetchedIdRef.current = editingId;
+
+//   (async () => {
+//     const {data} = await getRole(editingId);
+
+//     if (!data) {
+//       const sp = new URLSearchParams(location.search);
+//       sp.delete("role");
+//       navigate(`/roles?${sp.toString()}`, { replace: true });
+//       return;
+//     }
+
+//     setEditing(data);
+//   })();
+// }, [modalOpen, isNew, editingId, getRole, location.search, navigate]);
+
+
+
+//   // ---------- Handlers ----------
 //   function handleSearchChange(v) {
 //     setQuery(v);
 //     setPage(1);
 //     syncQueryInUrl({ query: v, page: 1 });
-//   }
-
-//   function handleRoleChange(v) {
-//     setRole(v);
-//     setPage(1);
-//     syncQueryInUrl({ role: v, page: 1 });
-//   }
-
-//   function handlePerPageChange(n) {
-//     setPerPage(n);
-//     setPage(1);
-//     syncQueryInUrl({ perPage: n, page: 1 });
 //   }
 
 //   function handlePageChange(p) {
@@ -149,29 +124,29 @@
 //     syncQueryInUrl({ page: p });
 //   }
 
-//   // ---------- Modal open/close via ?user= ----------
+//   // ---------- Modal open/close via ?role= ----------
 //   function openCreate() {
 //     const sp = new URLSearchParams(location.search);
-//     sp.set("user", "new");
-//     navigate(`/users?${sp.toString()}`);
+//     sp.set("role", "new");
+//     navigate(`/roles?${sp.toString()}`);
 //   }
 
-//   function handleEditClick(user) {
-//     if (!user?.id) return;
+//   function handleEditClick(roleRow) {
+//     if (!roleRow?.id) return;
 //     const sp = new URLSearchParams(location.search);
-//     sp.set("user", String(user.id));
-//     navigate(`/users?${sp.toString()}`);
+//     sp.set("role", String(roleRow.id));
+//     navigate(`/roles?${sp.toString()}`);
 //   }
 
 //   function handleCloseModal() {
 //     const sp = new URLSearchParams(location.search);
-//     sp.delete("user");
-//     navigate(`/users?${sp.toString()}`);
+//     sp.delete("role");
+//     navigate(`/roles?${sp.toString()}`);
 //     setEditing(null);
 //   }
 
-//   function handleView(user) {
-//     alert(`Viewing ${user?.name || user?.email || "User"}`);
+//   function handleView(roleRow) {
+//     alert(`Viewing ${roleRow?.display_name || roleRow?.name || "Role"}`);
 //   }
 
 //   // ---------- Save (create or update) ----------
@@ -179,8 +154,8 @@
 //     const isEditingExisting = !!editing && !!editing.id && !isNew;
 
 //     let ok;
-//     if (isEditingExisting) ok = await editUser(editing.id, payload);
-//     else ok = await addUser(payload);
+//     if (isEditingExisting) ok = await editRole(editing.id, payload);
+//     else ok = await addRole(payload);
 
 //     if (!ok) return;
 
@@ -191,7 +166,7 @@
 
 //   // ---------- RENDER ----------
 //   const renderContent = () => {
-//     if (usersLoading && apiStatus === API_STATUS_CONSTANTS.LOADING) return <Loader />;
+//     if (rolesLoading && apiStatus === API_STATUS_CONSTANTS.LOADING) return <Loader />;
 
 //     switch (apiStatus) {
 //       case API_STATUS_CONSTANTS.LOADING:
@@ -201,21 +176,21 @@
 //         return (
 //           <ErrorState
 //             error={error}
-//             title="Failed to load users"
-//             description="Something went wrong while fetching user data."
-//             onRetry={() => fetchUsers(lastQuery)}
+//             title="Failed to load roles"
+//             description="Something went wrong while fetching role data."
+//             onRetry={() => fetchRoles(lastQuery)}
 //             retryLabel="Retry"
 //           />
 //         );
 
 //       case API_STATUS_CONSTANTS.SUCCESS:
-//         if (!users || users.length === 0) return <EmptyState />;
+//         if (!roles || roles.length === 0) return <EmptyState />;
 //         return (
-//           <UsersTable
-//             users={users}
+//           <RolesTable
+//             roles={roles}
 //             onEdit={handleEditClick}
 //             onView={handleView}
-//             onDelete={removeUser}
+//             onDelete={removeRole}
 //           />
 //         );
 
@@ -230,9 +205,9 @@
 //       <div className="max-w-7xl mx-auto">
 //         <header className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
 //           <div>
-//             <h1 className="text-2xl font-bold">Users</h1>
+//             <h1 className="text-2xl font-bold">Roles</h1>
 //             <p className="text-sm text-gray-600 mt-1">
-//               Manage users, roles, and access.
+//               Manage roles and permissions.
 //             </p>
 //           </div>
 
@@ -242,28 +217,18 @@
 //               onClick={openCreate}
 //               className="px-4 py-2 rounded-md bg-green-600 text-white whitespace-nowrap"
 //             >
-//               Add user
+//               Add role
 //             </button>
 //           </div>
 //         </header>
 
 //         <div className="bg-white border rounded-lg p-4">
-//           <div className="mb-4">
-//             <FilterBar
-//               roleOptions={roleOptions}
-//               selectedRole={role}
-//               onSelectRole={handleRoleChange}
-//               perPage={perPage}
-//               onPerPageChange={handlePerPageChange}
-//             />
-//           </div>
-
 //           <div className="py-2">{renderContent()}</div>
 
 //           <div className="mt-6">
 //             <Pagination
 //               page={page}
-//               total={usersTotal}
+//               total={rolesTotal}
 //               perPage={perPage}
 //               onChange={handlePageChange}
 //             />
@@ -271,11 +236,10 @@
 //         </div>
 //       </div>
 
-//       <UserModal
+//       <RoleModal
 //         open={modalOpen}
-//         roles={roles}
 //         onClose={handleCloseModal}
-//         user={isNew ? null : editing}
+//         role={isNew ? null : editing}
 //         onSave={handleSave}
 //       />
 //     </div>
@@ -283,89 +247,107 @@
 // }
 
 
-import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// src/pages/Roles.jsx
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { useUsers } from "@/context/UsersContext";
 import { useRoles } from "@/context/RolesContext";
 
-// layout + common sections
+// layout + reusable sections
 import PageShell from "@/components/PageSections/PageShell";
 import PageHeaderSection from "@/components/PageSections/PageHeader";
 import PageSearchBar from "@/components/PageSections/PageSearchBar";
-import PageFilterBarSection from "@/components/PageSections/PageFilterSection";
 import PageContentSection from "@/components/PageSections/PageContentSection";
 import { Pagination } from "@/components/ReusableComponents";
 
-// modal
-import UserModal from "@/components/UserComponents/UserModal";
-
-// ✅ reusable table
+// ✅ table (recommended: use ResponsiveDataTable like Companies)
 import ResponsiveDataTable from "@/components/TableComponents/ResponsiveDataTable";
 
-export default function UsersPage() {
+// modal
+import RoleModal from "@/components/RolesComponents/RoleModal";
+
+export default function RolesPage() {
   const location = useLocation();
   const navigate = useNavigate();
-
-  // example role options (kept)
-  const roleOptions = useMemo(
-    () => ["All", "super_admin", "company_admin", "branch_admin", "staff"],
-    []
-  );
 
   // ---------- URL search params ----------
   const urlSearchParams = new URLSearchParams(location.search);
 
-  // modal controller: ?user=new or ?user=123
-  const userParam = urlSearchParams.get("user");
-  const modalOpen = !!userParam;
-  const isNew = userParam === "new";
-  const editingId = !isNew && userParam ? Number(userParam) : null;
+  // modal controller: ?role=new or ?role=123
+  const roleParam = urlSearchParams.get("role"); // "new", "123", or null
+  const modalOpen = !!roleParam;
+  const isNew = roleParam === "new";
+  const editingId = !isNew && roleParam ? Number(roleParam) : null;
 
-  // filters + pagination initial values from URL
+  // pagination initial values from URL
   const initialQuery = urlSearchParams.get("q") || "";
-  const initialRole = urlSearchParams.get("role") || "All";
   const initialPerPage = Number(urlSearchParams.get("perPage")) || 12;
   const initialPage = Number(urlSearchParams.get("page")) || 1;
 
   const [query, setQuery] = useState(initialQuery);
-  const [role, setRole] = useState(initialRole);
   const [perPage, setPerPage] = useState(initialPerPage);
   const [page, setPage] = useState(initialPage);
+
   const [editing, setEditing] = useState(null);
 
   const {
-    users,
-    usersLoading,
-    usersTotal,
-    addUser,
-    editUser,
-    removeUser,
-    getUser,
+    roles,
+    rolesLoading,
+    rolesTotal,
+    addRole,
+    editRole,
+    removeRole,
+    getRole,
     apiStatus,
     API_STATUS_CONSTANTS,
-    fetchUsers,
+    fetchRoles,
     lastQuery,
     error,
-  } = useUsers();
+  } = useRoles();
 
-  const { roles } = useRoles();
-
-  // ---------- Helper: sync q/role/page/perPage back to URL (keep ?user= if present) ----------
+  // ---------- Helper: sync q/page/perPage back to URL (keep ?role= if present) ----------
   const syncQueryInUrl = useCallback(
     (next = {}) => {
       const sp = new URLSearchParams(location.search);
 
       const q = next.query ?? query;
-      const r = next.role ?? role;
       const p = next.page ?? page;
       const limit = next.perPage ?? perPage;
 
       if (q) sp.set("q", q);
       else sp.delete("q");
-
-      if (r && r !== "All") sp.set("role", r);
-      else sp.delete("role");
 
       if (p && p !== 1) sp.set("page", String(p));
       else sp.delete("page");
@@ -373,37 +355,18 @@ export default function UsersPage() {
       if (limit && limit !== 12) sp.set("perPage", String(limit));
       else sp.delete("perPage");
 
-      // do not touch "user"
-      navigate(`/users?${sp.toString()}`, { replace: true });
+      // DO NOT TOUCH "role" here — modal stays open if it was open
+      navigate(`/roles?${sp.toString()}`, { replace: true });
     },
-    [location.search, navigate, query, role, page, perPage]
+    [location.search, navigate, query, page, perPage]
   );
 
-  // ---------- Modal open/close via ?user= ----------
-  const openCreate = useCallback(() => {
-    const sp = new URLSearchParams(location.search);
-    sp.set("user", "new");
-    navigate(`/users?${sp.toString()}`);
-  }, [location.search, navigate]);
+  // ---------- fetch roles list when query/page/perPage changes ----------
+  useEffect(() => {
+    fetchRoles({ query, page, perPage }).catch(() => {});
+  }, [query, page, perPage, fetchRoles]);
 
-  const openEdit = useCallback(
-    (u) => {
-      if (!u?.id) return;
-      const sp = new URLSearchParams(location.search);
-      sp.set("user", String(u.id));
-      navigate(`/users?${sp.toString()}`);
-    },
-    [location.search, navigate]
-  );
-
-  const closeModal = useCallback(() => {
-    const sp = new URLSearchParams(location.search);
-    sp.delete("user");
-    navigate(`/users?${sp.toString()}`);
-    setEditing(null);
-  }, [location.search, navigate]);
-
-  // ---------- Load user data when ?user=123 (edit mode) ----------
+  // ---------- Load role data when ?role=123 (edit mode) ----------
   const lastFetchedIdRef = useRef(null);
 
   useEffect(() => {
@@ -426,33 +389,26 @@ export default function UsersPage() {
     lastFetchedIdRef.current = editingId;
 
     (async () => {
-      const resp = await getUser(editingId);
+      const resp = await getRole(editingId);
       const data = resp?.data ?? resp;
 
       if (!data) {
-        closeModal();
+        const sp = new URLSearchParams(location.search);
+        sp.delete("role");
+        navigate(`/roles?${sp.toString()}`, { replace: true });
         return;
       }
 
       setEditing(data);
     })();
-  }, [modalOpen, isNew, editingId, getUser, closeModal]);
+  }, [modalOpen, isNew, editingId, getRole, location.search, navigate]);
 
-  // ---------- Handlers ----------
+  // ---------- handlers ----------
   const onSearchChange = useCallback(
     (v) => {
       setQuery(v);
       setPage(1);
       syncQueryInUrl({ query: v, page: 1 });
-    },
-    [syncQueryInUrl]
-  );
-
-  const onRoleChange = useCallback(
-    (v) => {
-      setRole(v);
-      setPage(1);
-      syncQueryInUrl({ role: v, page: 1 });
     },
     [syncQueryInUrl]
   );
@@ -474,13 +430,36 @@ export default function UsersPage() {
     [syncQueryInUrl]
   );
 
-  // ---------- Save ----------
+  // ---------- modal open/close via ?role= ----------
+  const openCreate = useCallback(() => {
+    const sp = new URLSearchParams(location.search);
+    sp.set("role", "new");
+    navigate(`/roles?${sp.toString()}`);
+  }, [location.search, navigate]);
+
+  const openEdit = useCallback(
+    (roleRow) => {
+      if (!roleRow?.id) return;
+      const sp = new URLSearchParams(location.search);
+      sp.set("role", String(roleRow.id));
+      navigate(`/roles?${sp.toString()}`);
+    },
+    [location.search, navigate]
+  );
+
+  const closeModal = useCallback(() => {
+    const sp = new URLSearchParams(location.search);
+    sp.delete("role");
+    navigate(`/roles?${sp.toString()}`);
+    setEditing(null);
+  }, [location.search, navigate]);
+
   const onSave = useCallback(
     async (payload) => {
       const ok =
         editing?.id && !isNew
-          ? await editUser(editing.id, payload)
-          : await addUser(payload);
+          ? await editRole(editing.id, payload)
+          : await addRole(payload);
 
       if (!ok) return;
 
@@ -488,170 +467,138 @@ export default function UsersPage() {
       syncQueryInUrl({ page: 1 });
       closeModal();
     },
-    [editing, isNew, editUser, addUser, syncQueryInUrl, closeModal]
+    [editing, isNew, editRole, addRole, syncQueryInUrl, closeModal]
   );
 
-  const onView = useCallback((u) => {
-    alert(`Viewing ${u?.full_name || u?.name || u?.email || "User"}`);
+  const onView = useCallback((roleRow) => {
+    alert(`Viewing ${roleRow?.display_name || roleRow?.name || "Role"}`);
   }, []);
 
-  // helpers for table rendering
-  const getInitials = (name) =>
-    !name
+  const getInitials = (txt) =>
+    !txt
       ? "--"
-      : String(name)
+      : String(txt)
           .split(" ")
           .filter(Boolean)
           .slice(0, 2)
-          .map((w) => w[0]?.toUpperCase?.() ?? "")
+          .map((w) => (w?.[0] || "").toUpperCase())
           .join("");
-
-  const getRoleLabel = (u) => {
-    // supports multiple shapes: {role: 'x'} OR {role:{code}} OR {role_id}
-    const code =
-      u?.role?.code ||
-      u?.role?.name ||
-      u?.role ||
-      u?.user_role ||
-      (u?.role_id ? String(u.role_id) : "");
-    return code || "—";
-  };
 
   return (
     <PageShell>
       <PageHeaderSection
-        title="Users"
-        subtitle="Manage users, roles, and access."
+        title="Roles"
+        subtitle="Manage roles and permissions."
         rightSlot={
           <>
             <PageSearchBar
               value={query}
               onChange={onSearchChange}
-              placeholder="Search users..."
-              ariaLabel="Search users"
+              placeholder="Search roles..."
+              ariaLabel="Search roles"
             />
             <button
               onClick={openCreate}
               className="px-4 py-2 rounded-md bg-green-600 text-white whitespace-nowrap"
             >
-              Add user
+              Add role
             </button>
           </>
         }
       />
 
       <div className="bg-white border rounded-lg p-4">
-        {/* ✅ filter section (same component you use everywhere) */}
-        <PageFilterBarSection
-          industryOptions={roleOptions} // reusing same prop name; works because it renders a select list
-          selectedIndustry={role}
-          onSelectIndustry={onRoleChange}
-          perPage={perPage}
-          onPerPageChange={onPerPageChange}
-        />
-
         <PageContentSection
           apiStatus={apiStatus}
           API_STATUS_CONSTANTS={API_STATUS_CONSTANTS}
-          loading={usersLoading}
+          loading={rolesLoading}
           error={error}
-          isEmpty={!users || users.length === 0}
-          errorTitle="Failed to load users"
-          errorDescription="Something went wrong while fetching user data."
-          onRetry={() => fetchUsers(lastQuery)}
+          isEmpty={!roles || roles.length === 0}
+          errorTitle="Failed to load roles"
+          errorDescription="Something went wrong while fetching role data."
+          onRetry={() => fetchRoles(lastQuery)}
           renderSuccess={() => (
             <ResponsiveDataTable
-              items={users || []}
-              loading={usersLoading}
-              loadingText="Loading users..."
-              emptyText="No users found."
-              rowKey={(u) => u.id}
-              getItemLabel={(u) => u?.full_name || u?.name || u?.email || "User"}
+              items={roles || []}
+              loading={rolesLoading}
+              loadingText="Loading roles..."
+              emptyText="No roles found."
+              rowKey={(r) => r.id}
+              getItemLabel={(r) => r?.display_name || r?.name || "Role"}
               columns={[
                 {
-                  key: "user",
-                  header: "User",
-                  render: (u) => (
+                  key: "role",
+                  header: "Role",
+                  render: (r) => (
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-semibold">
-                        {getInitials(u?.full_name || u?.name || u?.email)}
+                        {getInitials(r?.display_name || r?.name)}
                       </div>
                       <div>
                         <div className="font-medium text-gray-900">
-                          {u?.full_name || u?.name || "—"}
+                          {r?.display_name ?? "—"}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {u?.email ?? "—"}
+                          {r?.name ?? "—"}
                         </div>
                       </div>
                     </div>
                   ),
                 },
                 {
-                  key: "phone",
-                  header: "Phone",
+                  key: "description",
+                  header: "Description",
                   className: "text-sm text-gray-700",
-                  render: (u) => u?.phone ?? "—",
-                },
-                {
-                  key: "role",
-                  header: "Role",
-                  className: "text-sm text-gray-700",
-                  render: (u) => getRoleLabel(u),
+                  render: (r) => r?.description ?? "—",
                 },
                 {
                   key: "status",
                   header: "Status",
-                  render: (u) => (
+                  render: (r) => (
                     <div className="text-center">
-                      {u?.is_blocked ? (
-                        <span className="px-2 py-1 text-xs bg-red-50 text-red-700 rounded-full">
-                          Blocked
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded-full">
-                          Active
-                        </span>
-                      )}
-                      <div className="mt-1 text-xs text-gray-500">
-                        {u?.is_active === false ? "Disabled" : "Enabled"}
+                      <div
+                        className={`mt-1 text-xs ${
+                          r?.is_active ? "text-green-500" : "text-gray-500"
+                        }`}
+                      >
+                        {r?.is_active ? "Active" : "Disabled"}
                       </div>
                     </div>
                   ),
                 },
               ]}
-              actions={(u) => [
-                { key: "view", label: "View", onClick: () => onView(u) },
-                { key: "edit", label: "Edit", onClick: () => openEdit(u) },
+              actions={(r) => [
+                { key: "view", label: "View", onClick: () => onView(r) },
+                { key: "edit", label: "Edit", onClick: () => openEdit(r) },
                 {
                   key: "delete",
                   label: "Delete",
                   variant: "danger",
                   requireConfirm: true,
                   confirmTitle: (x) =>
-                    `Delete user "${x?.full_name || x?.name || x?.email || ""}"?`,
+                    `Delete role "${x?.display_name || x?.name || ""}"?`,
                   confirmDescription:
-                    "This action will permanently remove the user. This cannot be undone.",
+                    "This action will permanently remove the role. This cannot be undone.",
                   confirmLabel: "Delete",
-                  onClick: async (x) => await removeUser(x.id),
+                  onClick: async (x) => await removeRole(x.id),
                 },
               ]}
-              renderMobileCard={(u, openActions) => (
+              renderMobileCard={(r, openActions) => (
                 <article className="bg-white border rounded-2xl p-4 shadow-sm hover:shadow-md transition">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 font-semibold">
-                        {getInitials(u?.full_name || u?.name || u?.email)}
+                        {getInitials(r?.display_name || r?.name)}
                       </div>
                       <div>
                         <div className="font-medium text-gray-900">
-                          {u?.full_name || u?.name || "—"}
+                          {r?.display_name ?? "—"}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {u?.email ?? "—"}
+                          {r?.name ?? "—"}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          Role: {getRoleLabel(u)}
+                          {r?.description ?? ""}
                         </div>
                       </div>
                     </div>
@@ -681,19 +628,18 @@ export default function UsersPage() {
         />
 
         <Pagination
-          show={usersTotal > perPage}
+          show={rolesTotal > perPage}
           page={page}
-          total={usersTotal}
+          total={rolesTotal}
           perPage={perPage}
           onPageChange={onPageChange}
         />
       </div>
 
-      <UserModal
+      <RoleModal
         open={modalOpen}
-        roles={roles}
         onClose={closeModal}
-        user={isNew ? null : editing}
+        role={isNew ? null : editing}
         onSave={onSave}
       />
     </PageShell>
