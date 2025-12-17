@@ -35,10 +35,10 @@ export function RolesProvider({ children }) {
 
   console.log("Current User in RolesContext:", user);
 
-    const [lastQuery, setLastQuery] = useState({
+  const [lastQuery, setLastQuery] = useState({
     query: "",
     role: user?.role,
-    company_id: "", 
+    company_id: "",
     page: 1,
     perPage: 12,
   });
@@ -63,60 +63,62 @@ export function RolesProvider({ children }) {
         perPage: perPage ?? lastQuery.perPage ?? 12,
       };
 
-      try {
-        const resp = await getRoles(finalQuery);
-        const data = resp?.data;
+      if (user?.role !== "staff") {
+        try {
+          const resp = await getRoles(finalQuery);
+          const data = resp?.data;
 
-        let items = [];
-        let total = 0;
+          let items = [];
+          let total = 0;
 
-        if (Array.isArray(data)) {
-          items = data;
-          total = data.length;
-        } else if (Array.isArray(data?.items)) {
-          items = data.items;
-          total = data.total ?? data.items.length;
-        } else if (Array.isArray(data?.data)) {
-          items = data.data;
-          total = data.total ?? data.data.length;
-        } else if (data?.roles && Array.isArray(data.roles)) {
-          items = data.roles;
-          total = data.total ?? data.roles.length;
-        } else {
-          items = data || [];
-          total = Array.isArray(items) ? items.length : 0;
+          if (Array.isArray(data)) {
+            items = data;
+            total = data.length;
+          } else if (Array.isArray(data?.items)) {
+            items = data.items;
+            total = data.total ?? data.items.length;
+          } else if (Array.isArray(data?.data)) {
+            items = data.data;
+            total = data.total ?? data.data.length;
+          } else if (data?.roles && Array.isArray(data.roles)) {
+            items = data.roles;
+            total = data.total ?? data.roles.length;
+          } else {
+            items = data || [];
+            total = Array.isArray(items) ? items.length : 0;
+          }
+
+          setRoles(items);
+          setRolesTotal(typeof total === "number" ? total : items.length);
+
+          setLastQuery((prev) => {
+            const same =
+              prev.query === finalQuery.query &&
+              prev.role === finalQuery.role &&
+              String(prev.company_id ?? "") === String(finalQuery.company_id ?? "") &&
+              prev.page === finalQuery.page &&
+              prev.perPage === finalQuery.perPage;
+
+            return same ? prev : finalQuery;
+          });
+
+          setApiStatus(API_STATUS_CONSTANTS.SUCCESS);
+          return { items, total };
+        } catch (err) {
+          getErrorHandler(err);
+          setError(err?.response?.data || err);
+          setApiStatus(API_STATUS_CONSTANTS.FAILURE);
+          return null;
+        } finally {
+          setRolesLoading(false);
         }
-
-        setRoles(items);
-        setRolesTotal(typeof total === "number" ? total : items.length);
-
-        setLastQuery((prev) => {
-          const same =
-            prev.query === finalQuery.query &&
-            prev.role === finalQuery.role &&
-            String(prev.company_id ?? "") === String(finalQuery.company_id ?? "") &&
-            prev.page === finalQuery.page &&
-            prev.perPage === finalQuery.perPage;
-
-          return same ? prev : finalQuery;
-        });
-
-        setApiStatus(API_STATUS_CONSTANTS.SUCCESS);
-        return { items, total };
-      } catch (err) {
-        getErrorHandler(err);
-        setError(err?.response?.data || err);
-        setApiStatus(API_STATUS_CONSTANTS.FAILURE);
-        return null;
-      } finally {
-        setRolesLoading(false);
       }
     },
     [lastQuery, accessToken]
   );
 
   useEffect(() => {
-    fetchRoles().catch(() => {});
+    fetchRoles().catch(() => { });
   }, [fetchRoles]);
 
   async function addRole(payload) {

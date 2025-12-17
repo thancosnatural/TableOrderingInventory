@@ -31,12 +31,12 @@ export function UsersProvider({ children }) {
 
   const [error, setError] = useState(null);
 
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
 
   const [lastQuery, setLastQuery] = useState({
     query: "",
-    role: "All",
-    company_id: "", // optional filter
+    role: user?.role,
+    company_id: user?.company?.id,
     page: 1,
     perPage: 12,
   });
@@ -61,60 +61,62 @@ export function UsersProvider({ children }) {
         perPage: perPage ?? lastQuery.perPage ?? 12,
       };
 
-      try {
-        const resp = await getUsers(finalQuery);
-        const data = resp?.data;
+      if (user?.role !== "staff") {
+        try {
+          const resp = await getUsers(finalQuery);
+          const data = resp?.data;
 
-        let items = [];
-        let total = 0;
+          let items = [];
+          let total = 0;
 
-        if (Array.isArray(data)) {
-          items = data;
-          total = data.length;
-        } else if (Array.isArray(data?.items)) {
-          items = data.items;
-          total = data.total ?? data.items.length;
-        } else if (Array.isArray(data?.data)) {
-          items = data.data;
-          total = data.total ?? data.data.length;
-        } else if (data?.users && Array.isArray(data.users)) {
-          items = data.users;
-          total = data.total ?? data.users.length;
-        } else {
-          items = data || [];
-          total = Array.isArray(items) ? items.length : 0;
+          if (Array.isArray(data)) {
+            items = data;
+            total = data.length;
+          } else if (Array.isArray(data?.items)) {
+            items = data.items;
+            total = data.total ?? data.items.length;
+          } else if (Array.isArray(data?.data)) {
+            items = data.data;
+            total = data.total ?? data.data.length;
+          } else if (data?.users && Array.isArray(data.users)) {
+            items = data.users;
+            total = data.total ?? data.users.length;
+          } else {
+            items = data || [];
+            total = Array.isArray(items) ? items.length : 0;
+          }
+
+          setUsers(items);
+          setUsersTotal(typeof total === "number" ? total : items.length);
+
+          setLastQuery((prev) => {
+            const same =
+              prev.query === finalQuery.query &&
+              prev.role === finalQuery.role &&
+              String(prev.company_id ?? "") === String(finalQuery.company_id ?? "") &&
+              prev.page === finalQuery.page &&
+              prev.perPage === finalQuery.perPage;
+
+            return same ? prev : finalQuery;
+          });
+
+          setApiStatus(API_STATUS_CONSTANTS.SUCCESS);
+          return { items, total };
+        } catch (err) {
+          getErrorHandler(err);
+          setError(err?.response?.data || err);
+          setApiStatus(API_STATUS_CONSTANTS.FAILURE);
+          return null;
+        } finally {
+          setUsersLoading(false);
         }
-
-        setUsers(items);
-        setUsersTotal(typeof total === "number" ? total : items.length);
-
-        setLastQuery((prev) => {
-          const same =
-            prev.query === finalQuery.query &&
-            prev.role === finalQuery.role &&
-            String(prev.company_id ?? "") === String(finalQuery.company_id ?? "") &&
-            prev.page === finalQuery.page &&
-            prev.perPage === finalQuery.perPage;
-
-          return same ? prev : finalQuery;
-        });
-
-        setApiStatus(API_STATUS_CONSTANTS.SUCCESS);
-        return { items, total };
-      } catch (err) {
-        getErrorHandler(err);
-        setError(err?.response?.data || err);
-        setApiStatus(API_STATUS_CONSTANTS.FAILURE);
-        return null;
-      } finally {
-        setUsersLoading(false);
       }
     },
     [lastQuery, accessToken]
   );
 
   useEffect(() => {
-    fetchUsers().catch(() => {});
+    fetchUsers().catch(() => { });
   }, [fetchUsers]);
 
   async function addUser(payload) {
