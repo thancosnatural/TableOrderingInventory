@@ -30,7 +30,7 @@ export function CompaniesProvider({ children }) {
   const [companiesTotal, setCompaniesTotal] = useState(0);
   const [error, setError] = useState(null);
 
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
 
   const [lastQuery, setLastQuery] = useState({
     query: "",
@@ -38,6 +38,10 @@ export function CompaniesProvider({ children }) {
     page: 1,
     perPage: 12,
   });
+
+  useEffect(() => {
+    setSelectedCompany(user?.company)
+  },[user])
 
   const fetchCompanies = useCallback(
   async ({ query, industry, page, perPage } = {}) => {

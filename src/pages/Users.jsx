@@ -302,6 +302,7 @@ import UserModal from "@/components/UserComponents/UserModal";
 
 // ✅ reusable table
 import ResponsiveDataTable from "@/components/TableComponents/ResponsiveDataTable";
+import { useBranches } from "@/context/BranchesContext";
 
 export default function UsersPage() {
   const location = useLocation();
@@ -350,6 +351,7 @@ export default function UsersPage() {
   } = useUsers();
 
   const { roles } = useRoles();
+  const { branches } = useBranches();
 
   // ---------- Helper: sync q/role/page/perPage back to URL (keep ?user= if present) ----------
   const syncQueryInUrl = useCallback(
@@ -692,6 +694,7 @@ export default function UsersPage() {
       <UserModal
         open={modalOpen}
         roles={roles}
+        branches={branches}
         onClose={closeModal}
         user={isNew ? null : editing}
         onSave={onSave}

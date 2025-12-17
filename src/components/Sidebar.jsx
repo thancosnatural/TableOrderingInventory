@@ -83,9 +83,10 @@ export default function Sidebar({
         { key: "settings", label: "Settings", to: "/settings", icon: Settings },
       ],
 
-      brand_admin: [
+      company_admin: [
         { key: "dashboard", label: "Dashboard", to: "/", icon: LayoutDashboard },
-        { key: "outlets", label: "Outlets", to: "/outlets", icon: Store },
+        { key: "outlets", label: "Outlets", to: "/branches", icon: Store },
+        { key: "users", label: "Users", to: "/users", icon: Users },
         {
           key: "menu",
           label: "Menu",
@@ -107,6 +108,7 @@ export default function Sidebar({
       branch_admin: [
         { key: "dashboard", label: "Dashboard", to: "/", icon: LayoutDashboard },
         { key: "tables", label: "Tables", to: "/tables", icon: Table },
+        { key: "users", label: "Users", to: "/users", icon: Users },
         { key: "orders", label: "Orders", to: "/orders", icon: ClipboardList },
         { key: "kot", label: "KOT", to: "/kot", icon: ChefHat },
         { key: "billing", label: "Billing", to: "/billing", icon: Receipt },
@@ -164,7 +166,7 @@ export default function Sidebar({
                   />
                 </div>
                 <div className="leading-tight">
-                  <div className="font-semibold text-slate-900">Table Ordering</div>
+                  <div className="font-semibold text-slate-900">{user?.company?.name ? user?.company?.name : "Table Ordering"}</div>
                 </div>
               </Link>
             )}

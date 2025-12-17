@@ -595,7 +595,7 @@ export default function BranchesPage() {
       page,
       perPage,
       ...(isSuperAdmin ? { company_id: selectedCompany?.id } : {}),
-    }).catch(() => {});
+    }).catch(() => { });
   }, [query, state, page, perPage, isSuperAdmin, selectedCompany?.id, fetchBranches]);
 
   // ---------- load edit branch ----------
@@ -727,11 +727,11 @@ export default function BranchesPage() {
     !name
       ? "--"
       : name
-          .split(" ")
-          .filter(Boolean)
-          .slice(0, 2)
-          .map((w) => w[0]?.toUpperCase() ?? "")
-          .join("");
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase() ?? "")
+        .join("");
 
   return (
     <PageShell>
@@ -859,11 +859,18 @@ export default function BranchesPage() {
                     className: "text-sm text-gray-700",
                     render: (b) => b?.state ?? "—",
                   },
+                  // {
+                  //   key: "address",
+                  //   header: "Address",
+                  //   className: "text-sm text-gray-700",
+                  //   render: (b) => b?.area + ", " + b?.city + ", " + b?.state ?? "—",
+                  // },
+
                   {
                     key: "address",
                     header: "Address",
                     className: "text-sm text-gray-700",
-                    render: (b) => b?.address ?? b?.full_address ?? "—",
+                    render: (b) => b?.address ?? "—",
                   },
                   {
                     key: "status",
@@ -871,9 +878,8 @@ export default function BranchesPage() {
                     render: (b) => (
                       <div className="text-center">
                         <div
-                          className={`mt-1 text-xs ${
-                            b?.is_active ? "text-green-500" : "text-gray-500"
-                          }`}
+                          className={`mt-1 text-xs ${b?.is_active ? "text-green-500" : "text-gray-500"
+                            }`}
                         >
                           {b?.is_active ? "Active" : "Disabled"}
                         </div>

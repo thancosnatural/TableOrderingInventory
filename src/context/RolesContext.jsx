@@ -31,18 +31,20 @@ export function RolesProvider({ children }) {
 
   const [error, setError] = useState(null);
 
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
 
-  const [lastQuery, setLastQuery] = useState({
+  console.log("Current User in RolesContext:", user);
+
+    const [lastQuery, setLastQuery] = useState({
     query: "",
-    scope: "All", // optional filter if you use role scopes
-    company_id: "", // optional filter
+    role: user?.role,
+    company_id: "", 
     page: 1,
     perPage: 12,
   });
 
   const fetchRoles = useCallback(
-    async ({ query, scope, company_id, page, perPage } = {}) => {
+    async ({ query, role, company_id, page, perPage } = {}) => {
       if (!accessToken) {
         setRolesLoading(false);
         setApiStatus(API_STATUS_CONSTANTS.INITIAL);
@@ -55,7 +57,7 @@ export function RolesProvider({ children }) {
 
       const finalQuery = {
         query: query ?? lastQuery.query ?? "",
-        scope: scope ?? lastQuery.scope ?? "All",
+        role: role ?? lastQuery.role ?? "All",
         company_id: company_id ?? lastQuery.company_id ?? "",
         page: page ?? lastQuery.page ?? 1,
         perPage: perPage ?? lastQuery.perPage ?? 12,
@@ -91,7 +93,7 @@ export function RolesProvider({ children }) {
         setLastQuery((prev) => {
           const same =
             prev.query === finalQuery.query &&
-            prev.scope === finalQuery.scope &&
+            prev.role === finalQuery.role &&
             String(prev.company_id ?? "") === String(finalQuery.company_id ?? "") &&
             prev.page === finalQuery.page &&
             prev.perPage === finalQuery.perPage;
@@ -118,7 +120,6 @@ export function RolesProvider({ children }) {
   }, [fetchRoles]);
 
   async function addRole(payload) {
-    console.log(payload);
     setApiStatus(API_STATUS_CONSTANTS.LOADING);
     try {
       const resp = await createRole(payload);
