@@ -105,7 +105,7 @@ export function RolesProvider({ children }) {
           setApiStatus(API_STATUS_CONSTANTS.SUCCESS);
           return { items, total };
         } catch (err) {
-          getErrorHandler(err);
+          // getErrorHandler(err);
           setError(err?.response?.data || err);
           setApiStatus(API_STATUS_CONSTANTS.FAILURE);
           return null;

@@ -24,7 +24,6 @@ export function Card({ children, className = "" }) {
   return <div className={`bg-white rounded shadow p-4 sm:p-6 ${className}`.trim()}>{children}</div>;
 }
 
-
 export function IconButton({ children, onClick, title }) {
   return (
     <button onClick={onClick} title={title} className="p-2 rounded-md hover:bg-gray-100 inline-flex items-center gap-2">
@@ -41,7 +40,6 @@ export function Badge({ children, color = "green" }) {
   };
   return <span className={`px-2 py-1 rounded-md text-xs font-medium ${map[color] || map.green}`}>{children}</span>;
 }
-
 
 export function ErrorState({
   type = "glitch",           // "network" | "glitch"
@@ -103,8 +101,33 @@ export function ErrorState({
   );
 }
 
+const getInitials = (name) =>
+  !name
+    ? "--"
+    : name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase() ?? "")
+        .join("");
 
+export function InitialsAvatar({ name, className = "" }) {
+  return (
+    <div
+      className={`w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-semibold ${className}`}
+      title={name || ""}
+    >
+      {getInitials(name)}
+    </div>
+  );
+}
 
-
-
-
+export function ActiveStatus({ active }) {
+  return (
+    <div className="text-start">
+      <div className={`mt-1 text-xs ${active ? "text-green-500" : "text-gray-500"}`}>
+        {active ? "Active" : "Disabled"}
+      </div>
+    </div>
+  );
+}
